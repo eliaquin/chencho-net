@@ -17,8 +17,14 @@ public static class PhotoLoader
         using var stream = new MemoryStream(bytes, false);
         var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
         if (decoder is not (PngBitmapDecoder or JpegBitmapDecoder)) throw new InvalidDataException("La foto debe ser PNG o JPEG.");
-        var image = decoder.Frames[0];
-        if ((long)image.PixelWidth * image.PixelHeight > 50_000_000) throw new InvalidDataException("La foto excede 50 megapíxeles.");
+        var frame = decoder.Frames[0];
+        if ((long)frame.PixelWidth * frame.PixelHeight > 50_000_000) throw new InvalidDataException("La foto excede 50 megapíxeles.");
+        // BitmapFrame can retain a dispatcher-bound decoder even after Freeze. Copy decoded pixels
+        // to a standalone immutable BitmapSource before moving them from the worker to the UI.
+        var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+        int stride = checked(frame.PixelWidth * 4);
+        var pixels = new byte[checked(stride * frame.PixelHeight)]; converted.CopyPixels(pixels, stride, 0);
+        var image = BitmapSource.Create(frame.PixelWidth, frame.PixelHeight, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
         image.Freeze();
         return new(image, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)));
     }
@@ -35,7 +41,7 @@ public sealed class CardComposer(CardProfile profile, string profileDirectory)
         using (var dc = group.Open())
         {
             dc.PushClip(new RectangleGeometry(new Rect(Size)));
-            dc.DrawRectangle(back ? Brushes.White : (Brush)new BrushConverter().ConvertFromString(profile.Background)!, null, new Rect(Size));
+            dc.DrawRectangle((Brush)new BrushConverter().ConvertFromString(back ? profile.BackBackground : profile.Background)!, null, new Rect(Size));
             if (back) Back(dc); else Front(dc);
             if (calibration)
             {
@@ -51,14 +57,16 @@ public sealed class CardComposer(CardProfile profile, string profileDirectory)
 
         void Front(DrawingContext dc)
         {
+            var logo = profile.Fixed["logo"];
             if (string.IsNullOrEmpty(profile.Logo))
             {
-                dc.DrawEllipse(Brushes.White, new Pen(Brushes.LightSteelBlue, Dip(.4)), new(Dip(13), Dip(9)), Dip(7), Dip(7));
-                Text(dc, "ICPARD", 7, Brushes.DarkBlue, 5, 6, 16, 6, true);
+                double radius = Math.Min(logo.Width, logo.Height) / 2;
+                dc.DrawEllipse(Brushes.White, new Pen(Brushes.LightSteelBlue, Dip(.4)), new(Dip(logo.X + logo.Width / 2), Dip(logo.Y + logo.Height / 2)), Dip(radius), Dip(radius));
+                Text(dc, "ICPARD", logo.Points, Brushes.DarkBlue, logo.X, logo.Y + logo.Height * .3, logo.Width, logo.Height * .5, true);
             }
-            else Asset(dc, profile.Logo, Mm(5, 2, 16, 14));
-            if (!Text(dc, profile.Institution, 6.8, Brushes.White, 23, 5, 61, 10, false, true, 5.5)) errors.Add("El nombre institucional no cabe en la cabecera del perfil.");
-            Text(dc, "CARNET\nDE MIEMBRO", 6.5, Brushes.White, 2, 18, 22, 7, true, true);
+            else Asset(dc, profile.Logo, Mm(logo.X, logo.Y, logo.Width, logo.Height));
+            if (!FixedText(dc, profile.Institution, "institution", Brushes.White, false, true, 5.5)) errors.Add("El nombre institucional no cabe en la cabecera del perfil.");
+            if (!FixedText(dc, profile.MemberLegend, "memberLegend", Brushes.White, true, true, 5)) errors.Add("La leyenda del frente no cabe en el perfil.");
             var frame = Mm(profile.PhotoX, profile.PhotoY, profile.PhotoWidth, profile.PhotoHeight);
             dc.DrawRectangle(Brushes.WhiteSmoke, null, frame);
             if (photo is not null)
@@ -71,27 +79,34 @@ public sealed class CardComposer(CardProfile profile, string profileDirectory)
             }
             foreach (var field in profile.Fields)
             {
-                Text(dc, field.Label, 4.8, Brushes.White, field.X, field.Y, field.Width, 2.3, false);
+                if (!Text(dc, field.Label, field.LabelPoints, Brushes.White, field.X, field.Y, field.Width, 2.3, false)) errors.Add($"La etiqueta de {field.Key} no cabe en el perfil.");
                 dc.DrawRectangle(Brushes.AliceBlue, null, Mm(field.X, field.Y + 2.3, field.Width, field.Height - 2.3));
                 if (!Text(dc, values.GetValueOrDefault(field.Key, ""), field.Points, Brushes.Black, field.X + .5, field.Y + 2.5, field.Width - 1, field.Height - 2.7, false, false, 7)) errors.Add($"{field.Label}: el texto no cabe con fuente mínima de 7 puntos. Corrija el Excel o el perfil.");
             }
         }
         void Back(DrawingContext dc)
         {
-            Text(dc, "ICPARD", 30, Brushes.Black, 4, 2, 77.6, 14, true);
-            dc.DrawRectangle(Brushes.Black, null, Mm(3, 17, 79.6, 12));
-            if (!Text(dc, profile.Legend, 7.4, Brushes.White, 4, 19, 77.6, 9, true, true, 6)) errors.Add("La leyenda institucional no cabe en el reverso.");
-            Signature(profile.PresidentSignature, profile.President, profile.PresidentRole, 9);
-            Signature(profile.SecretarySignature, profile.Secretary, profile.SecretaryRole, 47);
-            void Signature(string asset, string name, string role, double x)
+            if (!FixedText(dc, profile.BackTitleText, "backTitle", Brushes.Black, true)) errors.Add("La cabecera del reverso no cabe en el perfil.");
+            var band = profile.Fixed["backBand"];
+            dc.DrawRectangle(Brushes.Black, null, Mm(band.X, band.Y, band.Width, band.Height));
+            if (!FixedText(dc, profile.Legend, "backLegend", Brushes.White, true, true, 6)) errors.Add("La leyenda institucional no cabe en el reverso.");
+            Signature(profile.PresidentSignature, profile.President, profile.PresidentRole, "president");
+            Signature(profile.SecretarySignature, profile.Secretary, profile.SecretaryRole, "secretary");
+            void Signature(string asset, string name, string role, string prefix)
             {
-                if (!string.IsNullOrEmpty(asset)) Asset(dc, asset, Mm(x, 32, 29, 10));
-                else Text(dc, "Firma pendiente de arte original", 4, Brushes.Gray, x, 35, 29, 5, true);
-                dc.DrawLine(new Pen(Brushes.Black, Dip(.1)), new(Dip(x), Dip(43)), new(Dip(x + 29), Dip(43)));
-                if (!Text(dc, name, 5.5, Brushes.Black, x - 3, 44, 35, 4, true, false, 4)) errors.Add("El nombre del firmante no cabe en el reverso.");
-                if (!Text(dc, role, 5, Brushes.DimGray, x - 3, 48, 35, 3, true, false, 4)) errors.Add("El cargo institucional no cabe en el reverso.");
+                var signature = profile.Fixed[prefix + "Signature"];
+                if (!string.IsNullOrEmpty(asset)) Asset(dc, asset, Mm(signature.X, signature.Y, signature.Width, signature.Height));
+                else Text(dc, "Firma pendiente de arte original", 4, Brushes.Gray, signature.X, signature.Y + signature.Height * .3, signature.Width, signature.Height * .5, true);
+                dc.DrawLine(new Pen(Brushes.Black, Dip(.1)), new(Dip(signature.X), Dip(signature.Y + signature.Height + 1)), new(Dip(signature.X + signature.Width), Dip(signature.Y + signature.Height + 1)));
+                if (!FixedText(dc, name, prefix + "Name", Brushes.Black, true, false, 4)) errors.Add("El nombre del firmante no cabe en el reverso.");
+                if (!FixedText(dc, role, prefix + "Role", Brushes.DimGray, true, false, 4)) errors.Add("El cargo institucional no cabe en el reverso.");
             }
         }
+    }
+    private bool FixedText(DrawingContext dc, string text, string key, Brush brush, bool center, bool multiline = false, double? minimum = null)
+    {
+        var element = profile.Fixed[key];
+        return Text(dc, text, element.Points, brush, element.X, element.Y, element.Width, element.Height, center, multiline, minimum);
     }
     private void Asset(DrawingContext dc, string relative, Rect frame)
     {

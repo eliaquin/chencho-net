@@ -7,6 +7,10 @@
 *.csproj text eol=lf
 *.props text eol=lf
 *.targets text eol=lf
+*.ps1 text eol=lf
+
+# Preserve upstream license text, including its intentional whitespace.
+docs/third-party/*.txt text eol=lf -whitespace
 
 *.xlsx binary
 *.rar binary
