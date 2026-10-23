@@ -1,0 +1,16 @@
+* text=auto
+
+*.md text eol=lf
+*.cs text eol=lf
+*.xaml text eol=lf
+*.json text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+
+*.xlsx binary
+*.rar binary
+*.mp4 binary
+*.jpeg binary
+*.jpg binary
+*.png binary

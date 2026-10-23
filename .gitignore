@@ -1,0 +1,34 @@
+# Archivos de macOS y Windows
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Compilación y pruebas de .NET
+**/bin/
+**/obj/
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+
+# Estado local del entorno de desarrollo
+.vs/
+.idea/
+*.user
+*.suo
+*.rsuser
+*.userosscache
+*.sln.docstates
+
+# Configuración local y credenciales
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+
+# Archivos temporales
+*.tmp
+*.bak
+~$*
