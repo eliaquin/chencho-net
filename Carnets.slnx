@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Carnets.Core/Carnets.Core.csproj" />
+    <Project Path="src/Carnets.Desktop/Carnets.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Carnets.Tests/Carnets.Tests.csproj" />
+  </Folder>
+</Solution>
