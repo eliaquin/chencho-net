@@ -1,12 +1,60 @@
-﻿<Window x:Class="Carnets.Desktop.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Carnets.Desktop"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
+<Window x:Class="Carnets.Desktop.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Carnets · ICPARD" Width="1440" Height="900" MinWidth="980" MinHeight="680" Background="#F1F4F8" FontFamily="Segoe UI" FontSize="13" Loaded="WindowLoaded" Closing="WindowClosing">
+ <Window.Resources>
+  <Style TargetType="Button"><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="0,0,8,6"/><Setter Property="Background" Value="White"/><Setter Property="BorderBrush" Value="#CBD5E1"/></Style>
+  <Style TargetType="TextBox"><Setter Property="Padding" Value="8,6"/><Setter Property="BorderBrush" Value="#CBD5E1"/></Style>
+  <Style TargetType="GroupBox"><Setter Property="Padding" Value="12"/><Setter Property="Margin" Value="0,0,0,10"/><Setter Property="Background" Value="White"/></Style>
+ </Window.Resources>
+ <DockPanel>
+  <Border DockPanel.Dock="Top" Background="#142B4A" Padding="24,18"><Grid><StackPanel><TextBlock Text="CARNETS / ICPARD" Foreground="White" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Preparación e impresión local de credenciales" Foreground="#BFD0E6" Margin="0,4,0,0"/></StackPanel><TextBlock Text="CR80 · 85,60 × 53,98 mm" Foreground="#BFD0E6" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border>
+  <Border DockPanel.Dock="Bottom" Background="#E2E8F0" Padding="18,10"><TextBlock x:Name="StatusText" Text="Cargue un libro Excel para comenzar." TextWrapping="Wrap"/></Border>
+  <Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <StackPanel x:Name="LoadBar"><WrapPanel><Button Content="_Cargar Excel" Click="LoadExcel"/><Button Content="Asociar columnas" Click="Remap"/><Button Content="Carpeta de _fotos" Click="ChooseFolder"/><Button Content="Configuración" Click="Configure"/><TextBlock x:Name="FileLabel" Text="Sin archivo" VerticalAlignment="Center" Foreground="#475569"/></WrapPanel><TextBlock x:Name="FolderLabel" Text="Carpeta de fotos: sin elegir" Foreground="#64748B" TextTrimming="CharacterEllipsis" Margin="0,0,0,12"/></StackPanel>
+   <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="410"/><ColumnDefinition Width="12"/><ColumnDefinition Width="480" MinWidth="360"/></Grid.ColumnDefinitions>
+    <Grid x:Name="RecordsPanel"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <TextBox x:Name="SearchBox" TextChanged="SearchChanged" ToolTip="Buscar por matrícula, cédula, nombre o apellido" AutomationProperties.Name="Buscar titulares" Margin="0,0,0,8"/>
+     <WrapPanel Grid.Row="1"><Button Content="Seleccionar resultados" Click="SelectFiltered"/><Button Content="Limpiar selección" Click="ClearSelection"/><Button Content="Quitar seleccionados con error" Click="RemoveInvalid"/></WrapPanel>
+     <DataGrid x:Name="Records" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" EnableRowVirtualization="True" EnableColumnVirtualization="True" SelectionMode="Single" SelectionChanged="CurrentChanged" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="34" Background="White" BorderBrush="#D7DEE8">
+      <DataGrid.Columns>
+       <DataGridTemplateColumn Header="✓" Width="36"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="Seleccionar titular"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+       <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="95"/>
+       <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="90"/>
+       <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="120"/>
+       <DataGridTextColumn Header="Apellido" Binding="{Binding Apellido}" Width="120"/>
+       <DataGridTextColumn Header="Cédula" Binding="{Binding Cedula}" Width="130"/>
+       <DataGridTextColumn Header="Provincia" Binding="{Binding Filial}" Width="140"/>
+       <DataGridTextColumn Header="2do. Nombre" Binding="{Binding SegundoNombre}" Width="120"/>
+       <DataGridTextColumn Header="2do. Apellido" Binding="{Binding SegundoApellido}" Width="120"/>
+       <DataGridTextColumn Header="Exequátur" Binding="{Binding Exequatur}" Width="100"/>
+       <DataGridTextColumn Header="Admisión" Binding="{Binding Admision}" Width="100"/>
+       <DataGridTextColumn Header="Expiración" Binding="{Binding Expiracion}" Width="100"/>
+       <DataGridTextColumn Header="Fila Excel" Binding="{Binding Row}" Width="85"/>
+      </DataGrid.Columns>
+     </DataGrid>
+     <TextBlock x:Name="SelectionLabel" Grid.Row="3" Text="0 seleccionados" Margin="0,10" TextWrapping="Wrap" FontWeight="SemiBold"/>
     </Grid>
+    <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" Background="#D7DEE8"/>
+    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+     <GroupBox Header="Vista previa del carnet"><StackPanel>
+      <TextBlock x:Name="CurrentLabel" Text="Elija una fila para revisarla" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+      <WrapPanel><RadioButton x:Name="FrontRadio" Content="Frente" IsChecked="True" Checked="SideChanged" Margin="0,0,16,10"/><RadioButton Content="Reverso" Checked="SideChanged" Margin="0,0,16,10"/><Button Content="Exportar vista PNG" Click="ExportPreview" Padding="8,3"/></WrapPanel>
+      <Border Background="#E2E8F0" Padding="10" MinHeight="220"><Viewbox x:Name="Preview" Stretch="Uniform"/></Border><TextBlock x:Name="ArtworkLabel" Foreground="#92400E" TextWrapping="Wrap" Margin="0,8,0,0"/>
+     </StackPanel></GroupBox>
+     <GroupBox Header="Selección para impresión" x:Name="SendPanel"><StackPanel>
+      <WrapPanel><TextBlock Text="Copias por titular" VerticalAlignment="Center" Margin="0,0,10,5"/><TextBox x:Name="CopiesBox" Width="64" Text="1" TextChanged="CopiesChanged" AutomationProperties.Name="Copias por titular"/></WrapPanel>
+      <TextBlock x:Name="ModeLabel" TextWrapping="Wrap" Margin="0,8"/><Button x:Name="ReviewButton" Content="_Revisar selección" Click="ReviewSelection" Background="#DDEBFA"/>
+      <TextBox x:Name="RunSummary" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" MaxHeight="220" VerticalScrollBarVisibility="Auto"/>
+     </StackPanel></GroupBox>
+     <GroupBox Header="Fotografía y encuadre de la sesión" x:Name="PhotoPanel"><StackPanel>
+      <WrapPanel><Button Content="Elegir foto…" Click="ChoosePhoto"/><Button Content="Buscar nombre en carpeta" Click="RelocatePhoto"/></WrapPanel>
+      <TextBlock Text="Acercamiento (sin deformar)"/><Slider x:Name="CropZoom" Minimum="1" Maximum="4" Value="1" ValueChanged="CropChanged" AutomationProperties.Name="Acercamiento de foto"/>
+      <TextBlock Text="Posición horizontal"/><Slider x:Name="CropX" Minimum="0" Maximum="1" Value="0.5" ValueChanged="CropChanged" AutomationProperties.Name="Posición horizontal de foto"/>
+      <TextBlock Text="Posición vertical"/><Slider x:Name="CropY" Minimum="0" Maximum="1" Value="0.5" ValueChanged="CropChanged" AutomationProperties.Name="Posición vertical de foto"/>
+      <Button Content="Restablecer encuadre" Click="ResetCrop"/>
+     </StackPanel></GroupBox>
+     <GroupBox Header="Validación de la fila"><TextBox x:Name="Details" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" MaxHeight="180" VerticalScrollBarVisibility="Auto"/></GroupBox>
+
+    </StackPanel></ScrollViewer>
+   </Grid>
+  </Grid>
+ </DockPanel>
 </Window>
