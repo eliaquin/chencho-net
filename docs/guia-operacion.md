@@ -41,7 +41,7 @@ El zoom de pantalla no modifica las medidas de impresión. **Exportar vista PNG*
 1. Busque por matrícula, cédula, nombre o apellido. Los filtros ignoran acentos y mayúsculas. Ordene pulsando los encabezados.
 2. Marque titulares individualmente o use **Seleccionar resultados**. La selección se conserva al filtrar; el contador indica seleccionados ocultos. **Limpiar selección** quita todos. **Quitar seleccionados con error** requiere esa acción explícita.
 3. Indique de 1 a 100 copias enteras. Tarjetas = titulares seleccionados × copias; dos caras corresponden a una tarjeta.
-4. Pulse **Revisar selección e imprimir…**. Revise la lista completa, impresora/modalidad y ambas vistas. Las advertencias aparecen al elegir cada titular. Reconozca expresamente los vencimientos si los hay.
+4. Pulse **Revisar selección e imprimir…**. Revise la lista completa, impresora/modalidad y ambas vistas. Las advertencias aparecen al elegir cada titular. Si hay vencimientos, **Confirmar** permanece deshabilitado hasta marcar su reconocimiento explícito; desmarcarlo vuelve a bloquear la confirmación.
 5. Confirme cada envío. El doble clic no crea otro lote; durante el envío no puede cambiar archivo, configuración, selección ni recortes.
 
 La modalidad normal siempre es de dos caras. En automático se prepara un trabajo de dos páginas por titular con sus copias. En manual se completa una tarjeta a la vez: frente, pausa para comprobar salida y reinsertar, confirmación y reverso. Nunca mezcle tarjetas de titulares diferentes entre ciclos.

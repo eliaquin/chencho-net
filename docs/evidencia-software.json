@@ -13,9 +13,9 @@
     "Ventana en menos de 5 segundos y vistas en menos de 1 segundo"
   ],
   "Metrics": {
-    "WindowStartupMilliseconds": 691.3434,
-    "BothPreviewsMilliseconds": 45.0812,
-    "ReadAndValidate1000Milliseconds": 108.0999
+    "WindowStartupMilliseconds": 769.5624,
+    "BothPreviewsMilliseconds": 50.5353,
+    "ReadAndValidate1000Milliseconds": 110.6855
   },
   "PhysicalZebraVerified": false,
   "ArtworkApproved": false

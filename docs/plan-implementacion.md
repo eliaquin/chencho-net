@@ -152,7 +152,7 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 **Objetivo:** entregar una aplicación que funcione desde su paquete de distribución y produzca el carnet definitivo.
 
 - [x] E7.1. Preparar el paquete para la arquitectura Windows de la estación, incluir recursos del perfil y resolver los componentes de ejecución de .NET. Documentar instalación del controlador de Zebra y requisitos para trabajar sin conexión.
-- [ ] E7.2. Instalar desde el paquete en un entorno de prueba o perfil limpio y ejecutar sin depender de rutas del desarrollador ni permisos de administrador para el uso diario. Verificar actualización conservando ajustes compatibles.
+- [x] E7.2. Instalar desde el paquete en un entorno de prueba o perfil limpio y ejecutar sin depender de rutas del desarrollador ni permisos de administrador para el uso diario. Verificar actualización conservando ajustes compatibles.
 - [ ] E7.3. Imprimir el diseño definitivo con arte limpio y datos controlados. Revisar frente, reverso, foto, leyendas, firmas, escala, posición y legibilidad en tres tarjetas consecutivas conforme a las tolerancias especificadas.
 - [x] E7.4. Completar la matriz de los 25 criterios de aceptación con resultado, evidencia y defectos pendientes. Documentar los no aplicables por modalidad instalada; no marcar como aprobados escenarios no ejecutados.
 - [x] E7.5. Entregar guía breve en español: cargar Excel, elegir carpeta de fotos, corregir errores, revisar selección, imprimir, reinsertar si corresponde, recuperar una cara y consultar la cola de Windows.
