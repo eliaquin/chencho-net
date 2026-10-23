@@ -74,6 +74,48 @@ public sealed class DesktopTests
         var profile = CardProfile.Default(); Assert.False(profile.ArtworkApproved); profile.ArtworkApproved = true;
         Assert.Throws<System.IO.InvalidDataException>(() => profile.Validate(System.IO.Path.GetTempPath()));
     });
+    [Fact] public void RealProductionRequiresArtworkAndExactValidatedPrinter()
+    {
+        var profile = CardProfile.Default(); var settings = new OperatorSettings { Mode = PrintMode.Automatic, Printer = "ZC300" };
+        Assert.Throws<System.IO.InvalidDataException>(() => PrintSafety.ValidateMode(settings, profile, false));
+        PrintSafety.ValidateMode(settings, profile, true); // Calibration deliberately precedes hardware acceptance.
+        profile.ArtworkApproved = true;
+        Assert.Throws<System.IO.InvalidDataException>(() => PrintSafety.ValidateMode(settings, profile, false));
+        settings.AutomaticValidated = true; settings.ValidatedPrinter = "ZC300"; PrintSafety.ValidateMode(settings, profile, false);
+        settings.Printer = "Other"; Assert.Throws<System.IO.InvalidDataException>(() => PrintSafety.ValidateMode(settings, profile, false));
+        settings.Mode = PrintMode.SimulationAutomatic; PrintSafety.ValidateMode(settings, CardProfile.Default(), false);
+    }
+    [Fact] public void ManualProductionRequiresBothFeedAndReinsertionInstructions()
+    {
+        var profile = CardProfile.Default(); profile.ArtworkApproved = true;
+        var settings = new OperatorSettings { Mode = PrintMode.Manual, Printer = "ZC300", ValidatedPrinter = "ZC300", ManualValidated = true };
+        Assert.Throws<System.IO.InvalidDataException>(() => PrintSafety.ValidateMode(settings, profile, false));
+        settings.Feed = "Una tarjeta por ciclo"; settings.Reinsertion = "Orientación comprobada"; PrintSafety.ValidateMode(settings, profile, false);
+    }
+    [Fact] public void PreparedSimulationUsesRealCompositionAndBlocksChangedResources() => Sta(() =>
+    {
+        string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Carnets.PreparedTests", Guid.NewGuid().ToString("N")); System.IO.Directory.CreateDirectory(directory);
+        try
+        {
+            string profilePath = System.IO.Path.Combine(directory, "profile.json"); CardProfile.SaveDefault(profilePath); var profile = CardProfile.Load(profilePath);
+            string photoPath = System.IO.Path.Combine(directory, "photo.png");
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(SyntheticPhoto().Bitmap)); using (var stream = System.IO.File.Create(photoPath)) encoder.Save(stream);
+            var card = new CardSnapshot("000123", Values(), photoPath, PhotoResolver.Fingerprint(photoPath), new());
+            var inner = new SimulatedPrintAdapter(); var composer = new CardComposer(profile, directory);
+            var adapter = new PreparedPrintAdapter(inner, composer, profilePath, profile, PrintSafety.ResourceStamp(profilePath, profile), false);
+            adapter.PrepareAsync(card, default).GetAwaiter().GetResult();
+            var receipt = adapter.SendAsync(new(card, 1, 2, CardSide.Both), default).GetAwaiter().GetResult(); Assert.StartsWith("SIM-", receipt.JobId); Assert.Equal(2, Assert.Single(inner.Jobs).Copies);
+            System.IO.File.AppendAllText(profilePath, " ");
+            Assert.Throws<SubmissionException>(() => adapter.PrepareAsync(card, default).GetAwaiter().GetResult());
+        }
+        finally { System.IO.Directory.Delete(directory, true); }
+    });
+    [Fact] public void CorruptPhotosAreRejectedWithoutReusingPreviousPixels() => Sta(() =>
+    {
+        string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "carnets-corrupt-" + Guid.NewGuid().ToString("N") + ".png");
+        try { System.IO.File.WriteAllText(path, "not an image"); Assert.ThrowsAny<Exception>(() => PhotoLoader.Load(path)); }
+        finally { System.IO.File.Delete(path); }
+    });
     [Fact] public void RenderSyntheticCardsForVisualVerification() => Sta(() =>
     {
         string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, "../../../../../"));

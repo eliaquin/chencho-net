@@ -6,7 +6,7 @@
  </Window.Resources>
  <DockPanel>
   <Border DockPanel.Dock="Top" Background="#142B4A" Padding="24,18"><Grid><StackPanel><TextBlock Text="CARNETS / ICPARD" Foreground="White" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Preparación e impresión local de credenciales" Foreground="#BFD0E6" Margin="0,4,0,0"/></StackPanel><TextBlock Text="CR80 · 85,60 × 53,98 mm" Foreground="#BFD0E6" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border>
-  <Border DockPanel.Dock="Bottom" Background="#E2E8F0" Padding="18,10"><TextBlock x:Name="StatusText" Text="Cargue un libro Excel para comenzar." TextWrapping="Wrap"/></Border>
+  <Border DockPanel.Dock="Bottom" Background="#E2E8F0" Padding="18,10"><DockPanel><Button x:Name="StopButton" DockPanel.Dock="Right" Content="_Detener pendientes" IsEnabled="False" Click="StopPending"/><TextBlock x:Name="StatusText" Text="Cargue un libro Excel para comenzar." TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel></Border>
   <Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
    <StackPanel x:Name="LoadBar"><WrapPanel><Button Content="_Cargar Excel" Click="LoadExcel"/><Button Content="Asociar columnas" Click="Remap"/><Button Content="Carpeta de _fotos" Click="ChooseFolder"/><Button Content="Configuración" Click="Configure"/><TextBlock x:Name="FileLabel" Text="Sin archivo" VerticalAlignment="Center" Foreground="#475569"/></WrapPanel><TextBlock x:Name="FolderLabel" Text="Carpeta de fotos: sin elegir" Foreground="#64748B" TextTrimming="CharacterEllipsis" Margin="0,0,0,12"/></StackPanel>
    <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="410"/><ColumnDefinition Width="12"/><ColumnDefinition Width="480" MinWidth="360"/></Grid.ColumnDefinitions>
@@ -41,7 +41,11 @@
      </StackPanel></GroupBox>
      <GroupBox Header="Selección para impresión" x:Name="SendPanel"><StackPanel>
       <WrapPanel><TextBlock Text="Copias por titular" VerticalAlignment="Center" Margin="0,0,10,5"/><TextBox x:Name="CopiesBox" Width="64" Text="1" TextChanged="CopiesChanged" AutomationProperties.Name="Copias por titular"/></WrapPanel>
-      <TextBlock x:Name="ModeLabel" TextWrapping="Wrap" Margin="0,8"/><Button x:Name="ReviewButton" Content="_Revisar selección" Click="ReviewSelection" Background="#DDEBFA"/>
+      <TextBlock x:Name="ModeLabel" TextWrapping="Wrap" Margin="0,8"/>
+      <ComboBox x:Name="SideChoice" SelectedIndex="0" Margin="0,0,0,8" AutomationProperties.Name="Caras para el envío"><ComboBoxItem Content="Normal · frente y reverso"/><ComboBoxItem Content="Recuperación explícita · solo frente"/><ComboBoxItem Content="Recuperación explícita · solo reverso"/></ComboBox>
+      <ComboBox x:Name="SimulationFault" SelectedIndex="0" Margin="0,0,0,8" AutomationProperties.Name="Escenario de simulación"><ComboBoxItem Content="Simulación: sin fallos"/><ComboBoxItem Content="Simulación: fallar en el segundo trabajo"/><ComboBoxItem Content="Simulación: resultado incierto en el segundo trabajo"/></ComboBox>
+      <Button x:Name="ReviewButton" Content="_Revisar selección e imprimir…" Click="ReviewSelection" Background="#DDEBFA"/>
+      <WrapPanel><Button Content="Prueba de calibración…" Click="Calibrate"/><Button Content="Consultar cola" Click="QueueStatus"/></WrapPanel>
       <TextBox x:Name="RunSummary" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" MaxHeight="220" VerticalScrollBarVisibility="Auto"/>
      </StackPanel></GroupBox>
      <GroupBox Header="Fotografía y encuadre de la sesión" x:Name="PhotoPanel"><StackPanel>

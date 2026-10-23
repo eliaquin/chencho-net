@@ -24,6 +24,8 @@ public partial class MainWindow : Window
     private string? loadedFile;
     private bool initialized, busy, syncingCrop;
     private int previewGeneration;
+    private CancellationTokenSource? pending;
+    private readonly List<(PrintRun Run, bool Simulated)> sessionRuns = [];
     private HolderRow? Current => Records.SelectedItem as HolderRow;
 
     public MainWindow() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChenchoNet")) { }
@@ -62,7 +64,11 @@ public partial class MainWindow : Window
     }
     private void Error(Exception error) => MessageBox.Show(this, error is InvalidDataException ? error.Message : "No se pudo completar la operación. Revise el archivo, los permisos y los recursos locales.\n" + error.Message, "Carnets", MessageBoxButton.OK, MessageBoxImage.Warning);
     private bool ConfirmDiscard() => !rows.Any(r => r.Crop != new Crop()) || MessageBox.Show(this, "Se perderán los encuadres de esta sesión. ¿Continuar?", "Encuadres", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
-    private void WindowClosing(object? sender, CancelEventArgs e) { if (busy || !ConfirmDiscard()) e.Cancel = true; }
+    private void WindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (busy) { e.Cancel = true; MessageBox.Show(this, "Hay una operación en curso. Detenga los envíos pendientes y espere su resumen antes de cerrar. Cerrar no cancela lo que Windows ya aceptó.", "Operación en curso"); }
+        else if (!ConfirmDiscard()) e.Cancel = true;
+    }
     private void SetBusy(bool value)
     {
         busy = value; LoadBar.IsEnabled = !value; RecordsPanel.IsEnabled = !value; PhotoPanel.IsEnabled = !value; SendPanel.IsEnabled = !value;
@@ -245,7 +251,12 @@ public partial class MainWindow : Window
         {
             if (row.PhotoPath is not null)
             {
-                try { row.Photo = await Task.Run(() => PhotoLoader.Load(row.PhotoPath)); row.PhotoError = null; }
+                try
+                {
+                    var latest = await Task.Run(() => PhotoLoader.Load(row.PhotoPath));
+                    if (row.Photo is not null && row.Photo.Hash != latest.Hash) { row.Photo = null; row.PhotoError = "La foto cambió desde la vista previa. Revise la fila de nuevo antes de enviar."; }
+                    else { row.Photo = latest; row.PhotoError = null; }
+                }
                 catch (Exception) { row.Photo = null; row.PhotoError = "Foto ausente o ilegible; seleccione otro archivo."; }
             }
             row.LayoutErrors = composer.Compose(row.Holder.Values, row.Photo, row.Crop, false).Errors;
@@ -266,12 +277,90 @@ public partial class MainWindow : Window
         SetBusy(true);
         try
         {
+            profile = CardProfile.Load(ProfilePath); composer = new(profile, localDirectory); Labels();
             var selected = await ReviewRowsAsync(); int copies = Selection.ParseCopies(CopiesBox.Text);
-            var text = string.Join("\n", selected.Select(r => $"{r.Matricula} · {r.Holder.Name}"));
-            RunSummary.Text = $"{selected.Length} titulares · {copies} copias · {selected.Length * copies} tarjetas\n{ModeLabel.Text}\n\n{text}\n\nSelección revisada. El envío se integrará en la siguiente tarea.";
-            StatusText.Text = "Selección revisada; no se envió ningún trabajo.";
+            CardSide side = (CardSide)SideChoice.SelectedIndex;
+            if (side != CardSide.Both && (selected.Length != 1 || copies != 1)) throw new InvalidDataException("Para recuperar una cara, seleccione exactamente un titular y una copia. Identifique la tarjeta incompleta antes de confirmar.");
+            var cards = selected.Select(r => new CardSnapshot(r.Matricula, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(r.Holder.Values)), r.PhotoPath!, r.Photo!.Hash, r.Crop,
+                r.Holder.Issues.Where(i => i.Warning).Select(i => i.Message).Concat(r.LowResolution ? new[] { "Resolución efectiva de foto inferior a 150 ppp." } : []).ToArray())).ToArray();
+            await SendCardsAsync(cards, copies, side, selected.Any(r => r.Holder.IsExpired(DateOnly.FromDateTime(DateTime.Now))), false);
         }
         catch (Exception ex) { Error(ex); }
         finally { SetBusy(false); RenderPreview(); }
+    }
+    private async Task SendCardsAsync(CardSnapshot[] cards, int copies, CardSide side, bool expired, bool calibration)
+    {
+        if (composer is null) throw new InvalidOperationException();
+        var snapshot = settings.Snapshot();
+        bool simulated = snapshot.Mode is PrintMode.SimulationAutomatic or PrintMode.SimulationManual;
+        bool manual = snapshot.Mode is PrintMode.Manual or PrintMode.SimulationManual;
+        PrintSafety.ValidateMode(snapshot, profile, calibration);
+        if (!simulated && !Printers().Contains(snapshot.Printer, StringComparer.Ordinal)) throw new InvalidDataException("La impresora elegida ya no está disponible. No se usará otra.");
+        if (calibration && manual && !simulated && (string.IsNullOrWhiteSpace(snapshot.Reinsertion) || string.IsNullOrWhiteSpace(snapshot.Feed))) throw new InvalidDataException("Antes de la prueba manual, escriba en Configuración las instrucciones de alimentación y reinserción que va a comprobar.");
+        string stamp = PrintSafety.ResourceStamp(ProfilePath, profile);
+        if (!Dialogs.ConfirmPrint(this, cards, copies, ModeLabel.Text, simulated ? "Cola virtual local · sin impresora física" : snapshot.Printer, side, expired, calibration, composer))
+        { StatusText.Text = "Envío cancelado antes de enviar. No se crearon trabajos."; return; }
+        IPrintAdapter inner = simulated ? new SimulatedPrintAdapter(SimulationFault.SelectedIndex == 0 ? 0 : 2, SimulationFault.SelectedIndex == 2) : new WindowsPrintAdapter(snapshot, composer, calibration);
+        var adapter = new PreparedPrintAdapter(inner, composer, ProfilePath, profile, stamp, calibration);
+        var run = new PrintRun(); sessionRuns.Add((run, simulated));
+        pending = new(); StopButton.IsEnabled = true;
+        try
+        {
+            await run.ExecuteAsync(cards, copies, manual, side, adapter, result => Task.FromResult(MessageBox.Show(this,
+                $"{(simulated ? "SIMULACIÓN · no hay una tarjeta física" : "MODO MANUAL")}\nMatrícula: {result.Card.Matricula}\nCopia: {result.Copy}\nEl frente fue aceptado por la cola. Compruebe que terminó físicamente antes de reinsertar.\nAlimentación: {snapshot.Feed}\nReinserción: {snapshot.Reinsertion}\n\n¿Confirma la reinserción de esta misma tarjeta para enviar el reverso? No continúe con otra tarjeta incompleta.",
+                "Confirmar reinserción", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes), ShowRunSummary, pending.Token);
+            ShowRunSummary();
+            StatusText.Text = simulated ? "Simulación terminada. Consulte el resumen; no se imprimieron tarjetas físicas." : "Envíos terminados o detenidos. Revise el resumen y la cola; la salida física no está verificada.";
+        }
+        finally { StopButton.IsEnabled = false; pending.Dispose(); pending = null; }
+    }
+    private void ShowRunSummary()
+    {
+        var lines = new List<string>();
+        for (int i = 0; i < sessionRuns.Count; i++)
+        {
+            var (run, simulated) = sessionRuns[i];
+            int Count(SubmissionState state) => run.Results.Where(r => r.State == state).Sum(r => r.Copies);
+            lines.Add($"Lote {i + 1} · {(simulated ? "SIMULACIÓN · cola virtual" : "COLA WINDOWS")}\nTarjetas con ambas caras en cola: {Count(SubmissionState.Accepted)} · pendientes: {Count(SubmissionState.Pending)} · incompletas: {Count(SubmissionState.Incomplete)} · desconocidas: {Count(SubmissionState.Unknown)} · fallidas: {Count(SubmissionState.Failed)}");
+            lines.AddRange(run.Results.Select(r => $"{r.Card.Matricula} · copia {r.Copy} · {r.Copies} tarjeta(s) · {r.State} · {r.Message}{(r.JobIds.Count > 0 ? " · trabajos: " + string.Join(", ", r.JobIds) : "")}"));
+        }
+        lines.Add("La cola no acredita tarjetas físicas completadas. Detener no cancela lo ya aceptado. No hay reintento automático.");
+        RunSummary.Text = string.Join("\n", lines);
+    }
+    private void StopPending(object sender, RoutedEventArgs e)
+    {
+        pending?.Cancel(); StopButton.IsEnabled = false; StatusText.Text = "Deteniendo nuevos envíos. Los trabajos ya aceptados deben revisarse en la cola; no se cancelan automáticamente.";
+    }
+    private void QueueStatus(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (settings.Mode is PrintMode.SimulationAutomatic or PrintMode.SimulationManual) { ShowRunSummary(); StatusText.Text = "Cola virtual en memoria. No representa estados del hardware Zebra."; return; }
+            if (!Printers().Contains(settings.Printer, StringComparer.Ordinal)) throw new InvalidDataException("La impresora seleccionada ya no está instalada.");
+            using var server = new LocalPrintServer(); using var queue = new PrintQueue(server, settings.Printer); queue.Refresh();
+            using var jobs = queue.GetPrintJobInfoCollection();
+            string description = string.Join("\n", jobs.Select(j => $"Trabajo {j.JobIdentifier}: {j.JobStatus}"));
+            MessageBox.Show(this, $"{queue.FullName}: {queue.QueueStatus}\n{description}\n\nEstos son los estados que informa Windows, no una verificación física. Para cancelar un trabajo aceptado, abra Configuración de Windows > Impresoras y escáneres > su impresora > Abrir cola.", "Estado de la cola");
+        }
+        catch (Exception ex) { Error(ex); }
+    }
+    private async void Calibrate(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        SetBusy(true);
+        string path = Path.Combine(Path.GetTempPath(), "carnets-calibration-" + Guid.NewGuid().ToString("N") + ".png");
+        try
+        {
+            profile = CardProfile.Load(ProfilePath); composer = new(profile, localDirectory);
+            var image = new System.Windows.Media.DrawingVisual();
+            using (var dc = image.RenderOpen()) { dc.DrawRectangle(System.Windows.Media.Brushes.LightGray, null, new Rect(0, 0, 200, 250)); dc.DrawEllipse(System.Windows.Media.Brushes.SteelBlue, null, new Point(100, 100), 45, 60); }
+            var bitmap = new RenderTargetBitmap(200, 250, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); bitmap.Render(image);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using (var stream = File.Create(path)) encoder.Save(stream);
+            string[] values = ["PRUEBA", "CALIBRACIÓN", "000-0000000-0", "PRUEBA-001", "SANTO DOMINGO", "-", "-", "000-00", "01/01/2026", "31/12/2028", ""];
+            var card = new CardSnapshot("PRUEBA-001", Fields.Keys.Zip(values).ToDictionary(p => p.First, p => p.Second), path, PhotoResolver.Fingerprint(path), new());
+            await SendCardsAsync([card], 1, CardSide.Both, false, true);
+        }
+        catch (Exception ex) { Error(ex); }
+        finally { if (File.Exists(path)) File.Delete(path); SetBusy(false); }
     }
 }
