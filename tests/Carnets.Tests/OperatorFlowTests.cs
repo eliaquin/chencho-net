@@ -10,6 +10,41 @@ namespace Carnets.Tests;
 
 public sealed class OperatorFlowTests
 {
+    [Fact] public void ExpiredCardsRequireAcknowledgementBeforeConfirmingTheActualSimulatedSend() => Ui(async () =>
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "Carnets.ExpiryTests", Guid.NewGuid().ToString("N"));
+        var window = new MainWindow(directory); var errors = new List<Exception>(); window.ErrorHandler = errors.Add;
+        bool acknowledgementWasRequired = false;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+        timer.Tick += (_, _) =>
+        {
+            foreach (Window dialog in window.OwnedWindows.Cast<Window>().ToArray())
+            {
+                if (dialog.Title != "Confirmar envío de carnets") continue;
+                var confirm = Descendants<Button>(dialog).Single(b => b.Name == "ConfirmAction");
+                var acknowledgement = Descendants<CheckBox>(dialog).Single();
+                Assert.False(confirm.IsEnabled); Assert.Equal(Visibility.Visible, acknowledgement.Visibility);
+                acknowledgement.IsChecked = true; Assert.True(confirm.IsEnabled);
+                acknowledgement.IsChecked = false; Assert.False(confirm.IsEnabled);
+                acknowledgement.IsChecked = true; acknowledgementWasRequired = true;
+                timer.Stop(); confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }
+        };
+        try
+        {
+            window.Show(); window.LoadDemoSession(); var row = window.SessionRows[0];
+            row.Holder.Expiration = DateOnly.FromDateTime(DateTime.Today).AddDays(-1);
+            row.Holder.Values["fechaExpiracion"] = row.Holder.Expiration.Value.ToString("dd/MM/yyyy");
+            string originalDate = row.Holder["fechaExpiracion"]; row.Selected = true;
+            timer.Start(); ((Button)window.FindName("ReviewButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            for (int i = 0; i < 300 && !((Button)window.FindName("ReviewButton")).IsEnabled; i++) await Task.Delay(20);
+            Assert.True(acknowledgementWasRequired); Assert.Empty(errors);
+            Assert.Contains("SIMULACIÓN", ((TextBox)window.FindName("RunSummary")).Text);
+            Assert.Contains("Aceptado por la cola", ((TextBox)window.FindName("RunSummary")).Text);
+            Assert.Equal(originalDate, row.Holder["fechaExpiracion"]);
+        }
+        finally { timer.Stop(); window.Close(); if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    });
     private static void Ui(Func<Task> action)
     {
         Exception? failure = null;

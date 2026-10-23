@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Destination = (Join-Path $env:LOCALAPPDATA 'Programs\ChenchoNet'),
     [switch]$DesktopShortcut,
     [switch]$SkipShortcuts

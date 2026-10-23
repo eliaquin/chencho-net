@@ -43,6 +43,15 @@ Fecha: 23 de octubre de 2026. Estación Windows 10.0.26300, arquitectura x64. SD
 - Revisados contenido del ZIP, licencias de runtime/WPF, ausencia de materiales personales, configuración fuera del programa, rutas relativas de recursos y ausencia de envío automático al abrir. No hay base de titulares ni historial persistente.
 - [Matriz de los 25 criterios](aceptacion.md) completada con evidencia y pendientes explícitos. La etapa de aceptación física no está cerrada. No se alteró la conectividad ni el escalado global de Windows del usuario para aparentar pruebas no ejecutadas.
 
+## Tarea 5: vencimientos y reinstalación compatible
+
+- 56 pruebas aprobadas. La nueva prueba recorre la confirmación WPF real con un carnet vencido: el botón está deshabilitado inicialmente, se habilita al reconocer el vencimiento y se vuelve a bloquear al desmarcarlo. El envío simulado termina aceptado y conserva la fecha original.
+- El botón mantiene la validación al aceptar, además de su estado visual. Su control se busca por nombre registrado, sin depender de la estructura de contenedores del diálogo.
+- `scripts/Test-Package.ps1` instala y reinstala el ZIP con LOCALAPPDATA aislado, sin accesos directos ni elevación. Comprueba ajustes compatibles byte por byte y ejecuta el diagnóstico del binario instalado. [Informe de instalación](evidencia-instalacion.json).
+- La ejecución verificó `ReinstalledWithoutAdmin: true`, ajustes conservados y diagnóstico instalado con salida 0. Se corrigió la codificación UTF-8 con BOM de los scripts para Windows PowerShell 5; la salida en español se comprobó en la repetición.
+- Revisión propia previa al merge: el bloqueo visual no sustituye la validación al confirmar, la prueba de instalación no modifica el perfil real del usuario, LOCALAPPDATA se restaura en finally y no se accede a una impresora física.
+- E7.2 queda comprobada para instalación/reinstalación compatible. Los recursos institucionales originales, Zebra real, escalado real de la estación y prueba de conectividad desconectada siguen pendientes en la matriz.
+
 ## Impresora y límites actuales
 
 `Get-Printer` enumera OneNote, Microsoft Print to PDF, Fax y EPSON L4260; no hay ZC300 instalada. El usuario confirmó que no dispone de una ZC300 y solicitó explorar la emulación.

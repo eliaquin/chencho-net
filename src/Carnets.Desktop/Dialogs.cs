@@ -15,7 +15,8 @@ public static class Dialogs
         var dock = new DockPanel { Margin = new Thickness(20) };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var cancel = new Button { Content = "Cancelar", IsCancel = true, Padding = new Thickness(16, 8, 16, 8), Margin = new Thickness(8) };
-        var ok = new Button { Content = "Confirmar", IsDefault = true, Padding = new Thickness(16, 8, 16, 8), Margin = new Thickness(8) };
+        var ok = new Button { Name = "ConfirmAction", Content = "Confirmar", IsDefault = true, Padding = new Thickness(16, 8, 16, 8), Margin = new Thickness(8) };
+        NameScope.SetNameScope(window, new NameScope()); window.RegisterName(ok.Name, ok);
         ok.Click += (_, _) => { try { accept(); window.DialogResult = true; } catch (Exception ex) { MessageBox.Show(window, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning); } };
         buttons.Children.Add(cancel); buttons.Children.Add(ok); DockPanel.SetDock(buttons, Dock.Bottom); dock.Children.Add(buttons); dock.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); window.Content = dock;
         return window;
@@ -53,6 +54,10 @@ public static class Dialogs
         var acknowledgement = new CheckBox { Content = "Reconozco que hay carnets vencidos y deseo enviar sus fechas sin modificarlas.", Margin = new Thickness(0, 12, 0, 12), Visibility = expired ? Visibility.Visible : Visibility.Collapsed };
         body.Children.Add(acknowledgement);
         var dialog = Shell(owner, "Confirmar envío de carnets", body, () => { if (expired && acknowledgement.IsChecked != true) throw new InvalidDataException("Reconozca explícitamente los vencimientos para continuar."); }, 800);
+        var confirm = (Button)dialog.FindName("ConfirmAction");
+        confirm.IsEnabled = !expired;
+        acknowledgement.Checked += (_, _) => confirm.IsEnabled = true;
+        acknowledgement.Unchecked += (_, _) => confirm.IsEnabled = !expired;
         return dialog.ShowDialog() == true;
     }
     public static Dictionary<string, int>? Mapping(Window owner, SheetData sheet, OperatorSettings settings, bool force)

@@ -4,7 +4,7 @@
 
 ## Evidencia reproducible
 
-`dotnet test tests/Carnets.Tests`: 55 pruebas de Core y WPF, incluyendo archivo y fotos originales, fixtures sintéticos, ventana y diálogos reales. El diagnóstico `--self-check` ejecutado desde el ZIP extraído e instalado por usuario termina con código 0; su informe está en [evidencia-software.json](evidencia-software.json). Las vistas y el XLSX sintético de 1.000 filas se generan bajo `artifacts/` y no se versionan.
+`dotnet test tests/Carnets.Tests`: 56 pruebas de Core y WPF, incluyendo archivo y fotos originales, fixtures sintéticos, ventana y diálogos reales. El diagnóstico `--self-check` ejecutado desde el ZIP extraído e instalado por usuario termina con código 0; su informe está en [evidencia-software.json](evidencia-software.json). La reinstalación sin elevación conserva ajustes byte por byte; véase [evidencia-instalacion.json](evidencia-instalacion.json). Las vistas y el XLSX sintético de 1.000 filas se generan bajo `artifacts/` y no se versionan.
 
 La estación no dispone de Zebra ZC300, según inventario y confirmación del usuario. No hay modalidad física instalada que pueda marcarse como no aplicable frente a otra ya aceptada: ambas conservan validación pendiente. El sello inicial es provisional; logo y firmas originales y su revisión al tamaño final siguen pendientes.
 
@@ -31,8 +31,8 @@ La estación no dispone de Zebra ZC300, según inventario y confirmación del us
 | CA-17 | `BackContainsNoVariableDataAndRemainsSameAcrossHolders`; posiciones/textos fijos en perfil | Firmas originales y aprobación visual impresa |
 | CA-18 | Ocho caras, cuatro ciclos manuales y cuatro pausas comprobados desde el paquete; cancelación deja incompleta sin avanzar | Alimentación y reinserción comprobadas en ZC300 real |
 | CA-19 | `OperatorTableKeepsSelectionWhenFilteringAndSortingAndCropDoesNotChangePhoto`; casilla real, filtro/orden y conteo de ocultos | Lista completa implementada en confirmación; recorrido manual final |
-| CA-20 | Fecha invertida bloqueada; vencimiento advertido; reconocimiento obligatorio en confirmación | Recorrido manual del reconocimiento de vencimientos |
-| CA-21 | Configuración versionada, guardado atómico, archivo corrupto conservado y restablecimiento explícito | Recorrido manual de restablecimiento y actualización en estación final |
+| CA-20 | Fecha invertida bloqueada; prueba del diálogo real: confirmación deshabilitada sin reconocimiento, desmarcar vuelve a bloquear, envío simulado aceptado conservando la fecha | Repetir con operación física |
+| CA-21 | Configuración versionada y atómica; reinstalación sin elevación conserva ajustes compatibles byte por byte y diagnóstico instalado pasa | Recorrido manual del restablecimiento explícito de un perfil corrupto en estación final |
 | CA-22 | 1.000 filas XLSX leídas/validadas; ventana y vistas dentro de objetivos desde paquete instalado | Repetir en la estación definitiva con su escalado |
 | CA-23 | Detención de pendientes y recuperación explícita de cara implementadas; aceptados no cancelados automáticamente | Recuperación de una tarjeta física identificada y consulta/cancelación en cola real |
 | CA-24 | Huellas de fotos/recursos, fallo si cambian, copia de píxeles inmutable y dibujos congelados antes de enviar | Repetición con un lote del controlador real y revisión del resumen parcial |
