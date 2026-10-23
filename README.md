@@ -9,8 +9,17 @@ Aplicación de escritorio prevista para C#, WPF y .NET 10, desarrollada y probad
 - [Decisión tecnológica y arquitectura](docs/evaluacion-tecnologica.md): solución .NET, composición y adaptación a impresión Windows.
 - [Análisis del material](docs/analisis-material.md): evidencia del Excel, fotografías y video incluidos en `docs/`.
 
-## Al abrir el proyecto en Windows
+## Desarrollo en Windows
 
-Comenzar por **E0.1 del plan de implementación**. La solución .NET todavía no está creada. Los comandos definitivos de compilación, prueba y ejecución se añadirán aquí durante la etapa 0, después de comprobarlos en Windows.
+SDK .NET 10.0.400, Windows x64. No se necesita Microsoft Excel. La lectura de `.xlsx` utiliza ZIP/XML de .NET sin ejecutar fórmulas, macros o conexiones externas ni incorporar bibliotecas de Excel.
 
-Las primeras comprobaciones del entorno serán `dotnet --info` y `dotnet --list-sdks`. Los materiales originales se conservarán intactos; las pruebas usarán carpetas de trabajo y datos sintéticos cuando corresponda.
+```powershell
+dotnet restore Carnets.slnx
+dotnet build Carnets.slnx
+dotnet test tests/Carnets.Tests
+dotnet run --project src/Carnets.Desktop
+```
+
+La solución incluye `Carnets.Core` (datos, validación, fotos, configuración y planificación de envíos), `Carnets.Desktop` (WPF) y `Carnets.Tests`. La interfaz está en implementación; el núcleo tiene pruebas funcionales con el Excel incluido y datos sintéticos.
+
+La simulación es un adaptador local determinista, no un emulador del firmware de Zebra. Permite probar trabajos de ambas caras, copias, reinserción manual y fallos parciales sin impresora. Ninguna simulación acredita calidad, alimentación o calibración físicas. Véase [verificación Windows](docs/verificacion-windows.md).

@@ -1,6 +1,6 @@
 # Plan de implementación por etapas
 
-Fecha: 23 de octubre de 2026. Base: especificaciones versión 1.0. Estado: planificación terminada; desarrollo pendiente de comenzar en Windows.
+Fecha: 23 de octubre de 2026. Base: especificaciones versión 1.0. Estado: etapa 0 y núcleo implementados; interfaz en desarrollo y validación física pendiente.
 
 ## 1. Punto de partida
 
@@ -45,12 +45,12 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** disponer de un punto de partida que compile y se ejecute en la computadora donde se desarrollará.
 
-- [ ] E0.1. Abrir la carpeta completa del proyecto en Windows y comprobar que se trasladaron el Excel, el RAR, las cuatro fotografías, el video y los documentos.
-- [ ] E0.2. Registrar versión y arquitectura de Windows. Instalar el SDK de .NET 10 y un entorno compatible con C# y WPF; comprobar el SDK con `dotnet --info` y `dotnet --list-sdks` desde una terminal nueva.
-- [ ] E0.3. Crear una solución `Carnets` con `src/Carnets.Core`, `src/Carnets.Desktop` y `tests/Carnets.Tests`. El escritorio usa WPF y un destino Windows de .NET 10; referencia a Core. Tests comienza comprobando las reglas de Core.
-- [ ] E0.4. Configurar la versión del SDK, las dependencias iniciales y las exclusiones de archivos generados. Registrar los comandos de compilación, prueba y ejecución en el README. Inicializar Git si todavía no existe y comprobar qué materiales deben permanecer locales antes de incorporar archivos al control de versiones.
-- [ ] E0.5. Abrir una ventana WPF mínima y comprobar que la solución compila y que el proyecto de pruebas puede ejecutarse. Una plantilla vacía de pruebas no cuenta como validación funcional.
-- [ ] E0.6. Crear `docs/verificacion-windows.md` para registrar entorno, decisiones de impresora y resultados observados. Anotar datos técnicos sin copiar datos personales de los titulares.
+- [x] E0.1. Abrir la carpeta completa del proyecto en Windows y comprobar que se trasladaron el Excel, el RAR, las cuatro fotografías, el video y los documentos.
+- [x] E0.2. Registrar versión y arquitectura de Windows. Instalar el SDK de .NET 10 y un entorno compatible con C# y WPF; comprobar el SDK con `dotnet --info` y `dotnet --list-sdks` desde una terminal nueva.
+- [x] E0.3. Crear una solución `Carnets` con `src/Carnets.Core`, `src/Carnets.Desktop` y `tests/Carnets.Tests`. El escritorio usa WPF y un destino Windows de .NET 10; referencia a Core. Tests comienza comprobando las reglas de Core.
+- [x] E0.4. Configurar la versión del SDK, las dependencias iniciales y las exclusiones de archivos generados. Registrar los comandos de compilación, prueba y ejecución en el README. Inicializar Git si todavía no existe y comprobar qué materiales deben permanecer locales antes de incorporar archivos al control de versiones.
+- [x] E0.5. Abrir una ventana WPF mínima y comprobar que la solución compila y que el proyecto de pruebas puede ejecutarse. Una plantilla vacía de pruebas no cuenta como validación funcional.
+- [x] E0.6. Crear `docs/verificacion-windows.md` para registrar entorno, decisiones de impresora y resultados observados. Anotar datos técnicos sin copiar datos personales de los titulares.
 
 **Entregable:** solución mínima, instrucciones reproducibles y ficha del entorno.
 
@@ -181,7 +181,7 @@ Marcar una tarea como completada solo cuando exista su entregable y se haya real
 
 | Etapa | Estado inicial | Evidencia al comenzar |
 | --- | --- | --- |
-| 0 | Pendiente | Sin solución .NET ni validación de Windows |
+| 0 | Completada | Solución compilada, 34 pruebas y ventana WPF abierta; ver verificacion-windows.md |
 | 1 | Pendiente | Sin prueba física |
 | 2 | Pendiente | Material Excel disponible |
 | 3 | Pendiente | Fotos de prueba disponibles dentro del RAR |
@@ -190,7 +190,7 @@ Marcar una tarea como completada solo cuando exista su entregable y se haya real
 | 6 | Pendiente | Sin implementación |
 | 7 | Pendiente | Sin paquete ni aceptación |
 
-**Siguiente tarea al abrir el proyecto en Windows: E0.1.**
+**Siguiente tarea: interfaz de carga, asociación de columnas y vista previa (etapas 2–4). Etapa 1 pendiente de hardware.**
 
 Mensaje sugerido para iniciar una nueva sesión de desarrollo:
 
