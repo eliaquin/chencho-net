@@ -2,7 +2,7 @@ namespace Carnets.Core;
 
 public enum CardSide { Both, Front, Back }
 public enum SubmissionState { Pending, Preparing, Sending, Accepted, Incomplete, Failed, Unknown }
-public sealed record CardSnapshot(string Matricula, IReadOnlyDictionary<string, string> Values, string PhotoPath, string PhotoHash, Crop Crop);
+public sealed record CardSnapshot(string Matricula, IReadOnlyDictionary<string, string> Values, string PhotoPath, string PhotoHash, Crop Crop, IReadOnlyList<string>? Warnings = null);
 public sealed record Submission(CardSnapshot Card, int Copy, int Copies, CardSide Side);
 public sealed record Receipt(string? JobId, string Message);
 public interface IPrintAdapter

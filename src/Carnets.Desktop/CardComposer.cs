@@ -80,7 +80,7 @@ public sealed class CardComposer(CardProfile profile, string profileDirectory)
         {
             Text(dc, "ICPARD", 30, Brushes.Black, 4, 2, 77.6, 14, true);
             dc.DrawRectangle(Brushes.Black, null, Mm(3, 17, 79.6, 12));
-            Text(dc, profile.Legend, 7.4, Brushes.White, 4, 19, 77.6, 9, true, true);
+            if (!Text(dc, profile.Legend, 7.4, Brushes.White, 4, 19, 77.6, 9, true, true, 6)) errors.Add("La leyenda institucional no cabe en el reverso.");
             Signature(profile.PresidentSignature, profile.President, profile.PresidentRole, 9);
             Signature(profile.SecretarySignature, profile.Secretary, profile.SecretaryRole, 47);
             void Signature(string asset, string name, string role, double x)
@@ -88,8 +88,8 @@ public sealed class CardComposer(CardProfile profile, string profileDirectory)
                 if (!string.IsNullOrEmpty(asset)) Asset(dc, asset, Mm(x, 32, 29, 10));
                 else Text(dc, "Firma pendiente de arte original", 4, Brushes.Gray, x, 35, 29, 5, true);
                 dc.DrawLine(new Pen(Brushes.Black, Dip(.1)), new(Dip(x), Dip(43)), new(Dip(x + 29), Dip(43)));
-                Text(dc, name, 5.5, Brushes.Black, x - 3, 44, 35, 4, true);
-                Text(dc, role, 5, Brushes.DimGray, x - 3, 48, 35, 3, true);
+                if (!Text(dc, name, 5.5, Brushes.Black, x - 3, 44, 35, 4, true, false, 4)) errors.Add("El nombre del firmante no cabe en el reverso.");
+                if (!Text(dc, role, 5, Brushes.DimGray, x - 3, 48, 35, 3, true, false, 4)) errors.Add("El cargo institucional no cabe en el reverso.");
             }
         }
     }

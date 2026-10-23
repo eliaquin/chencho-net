@@ -21,6 +21,16 @@ Fecha: 23 de octubre de 2026. Estación Windows 10.0.26300, arquitectura x64. SD
 - Revisión propia: se corrigió la selección por casilla dentro de la tabla de solo lectura y se situó la revisión de selección inmediatamente después de la vista previa. La configuración no cambia de impresora automáticamente y los perfiles corruptos requieren restablecimiento explícito conservando copia.
 - La interfaz de envío, el seguimiento de cola y el paquete se completan en las tareas siguientes. Logo y firmas siguen siendo recursos de producción pendientes; el perfil inicial no se declara aprobado.
 
+## Tarea 3: envío, simulación y recuperación
+
+- Confirmación por envío con impresora/modalidad, lista íntegra de titulares, ambas vistas, advertencias y reconocimiento obligatorio de vencimientos. Copias 1–100. Recuperación explícita de una cara para una tarjeta identificada.
+- Simulador local automático/manual con fallo controlado del segundo trabajo y resultado incierto. Detención de pendientes, bloqueo de cambios durante el envío y resumen de sesión únicamente en memoria.
+- Adaptador Windows WPF/XPS con tamaño CR80, escala 100 %, orientación, dúplex/copia validados contra el controlador y un documento de dos páginas por titular. Conserva identificadores de cola cuando siguen disponibles y consulta sus estados sin afirmar salida física.
+- El modo real requiere arte aprobado y validación física de la impresora exacta. La prueba de calibración con datos ficticios y marcas a 3 mm es una acción explícita anterior a la aceptación; no habilita por sí sola producción.
+- `dotnet test tests/Carnets.Tests --no-restore`: 44 pruebas aprobadas. Nuevas comprobaciones cubren arte no aprobado, impresora distinta, instrucciones manuales incompletas, fotos corruptas y recursos modificados después de revisión.
+- Revisión propia antes del merge: corregida la posibilidad de releer arte mutable durante el envío. Se congelan los dibujos preparados y se comprueba la huella de los recursos antes/después de prepararlos. Las fotos cambiadas requieren nueva revisión; no se reenvía automáticamente un resultado incierto. `git diff --check` correcto.
+- La integración del controlador, el orden físico de caras y los fallos reales de ZC300 permanecen sin ejecutar por ausencia de hardware. No se cuentan como pruebas aprobadas.
+
 ## Impresora y límites actuales
 
 `Get-Printer` enumera OneNote, Microsoft Print to PDF, Fax y EPSON L4260; no hay ZC300 instalada. El usuario confirmó que no dispone de una ZC300 y solicitó explorar la emulación.

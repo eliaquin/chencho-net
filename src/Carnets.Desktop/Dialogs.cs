@@ -8,6 +8,7 @@ namespace Carnets.Desktop;
 
 public static class Dialogs
 {
+    private sealed record ConfirmationItem(CardSnapshot Card, string Label);
     public static Window Shell(Window owner, string title, UIElement body, Action accept, double width = 650)
     {
         var window = new Window { Owner = owner, Title = title, Width = width, Height = 680, MinWidth = 440, MinHeight = 300, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = System.Windows.Media.Brushes.White, FontSize = 14 };
@@ -25,6 +26,34 @@ public static class Dialogs
         string? result = null;
         var dialog = Shell(owner, "Elegir hoja del Excel", list, () => result = (string)list.SelectedItem, 500); dialog.Height = 350;
         return dialog.ShowDialog() == true ? result : null;
+    }
+    public static bool ConfirmPrint(Window owner, IReadOnlyList<CardSnapshot> cards, int copies, string mode, string printer, CardSide side, bool expired, bool calibration, CardComposer composer)
+    {
+        var body = new StackPanel();
+        body.Children.Add(new TextBlock { Text = $"{(calibration ? "PRUEBA DE CALIBRACIÓN" : "REVISIÓN ANTES DE ENVIAR")}\n{mode}\nDestino: {printer}\n{cards.Count} titulares × {copies} copias = {cards.Count * copies} tarjetas\nCaras: {(side == CardSide.Both ? "frente y reverso" : side == CardSide.Front ? "SOLO FRENTE · recuperación explícita" : "SOLO REVERSO · recuperación explícita")}\n\nLa aceptación por una cola no demuestra salida física. Revise toda la selección, incluidos los titulares ocultos por el filtro.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) });
+        var list = new ListBox { ItemsSource = cards.Select(c => new ConfirmationItem(c, $"{c.Matricula} · {c.Values.GetValueOrDefault("nombre")} {c.Values.GetValueOrDefault("apellido")}{(c.Warnings?.Count > 0 ? " · advertencias" : "")}")), DisplayMemberPath = nameof(ConfirmationItem.Label), MaxHeight = 170, MinHeight = 80 };
+        body.Children.Add(list);
+        var name = new TextBlock { Margin = new Thickness(0, 8, 0, 8), TextWrapping = TextWrapping.Wrap }; body.Children.Add(name);
+        var preview = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new Thickness(0, 8, 0, 8) }; body.Children.Add(preview);
+        list.SelectionChanged += (_, _) =>
+        {
+            preview.Children.Clear();
+            if (list.SelectedItem is not ConfirmationItem choice) return;
+            var card = choice.Card;
+            name.Text = $"{card.Matricula} · {card.Values.GetValueOrDefault("nombre")} {card.Values.GetValueOrDefault("apellido")}\n" + string.Join("\n", card.Warnings ?? []);
+            try
+            {
+                var photo = PhotoLoader.Load(card.PhotoPath);
+                if (photo.Hash != card.PhotoHash) throw new InvalidDataException("La foto cambió; cancele y revísela de nuevo.");
+                foreach (bool back in new[] { false, true }) preview.Children.Add(new Viewbox { Child = composer.Visual(composer.Compose(card.Values, photo, card.Crop, back, calibration).Drawing), Margin = new Thickness(4) });
+            }
+            catch (Exception) { name.Text += "\nFoto cambiada o ilegible. Cancele y revise; el envío se bloqueará si no coincide."; }
+        };
+        list.SelectedIndex = 0;
+        var acknowledgement = new CheckBox { Content = "Reconozco que hay carnets vencidos y deseo enviar sus fechas sin modificarlas.", Margin = new Thickness(0, 12, 0, 12), Visibility = expired ? Visibility.Visible : Visibility.Collapsed };
+        body.Children.Add(acknowledgement);
+        var dialog = Shell(owner, "Confirmar envío de carnets", body, () => { if (expired && acknowledgement.IsChecked != true) throw new InvalidDataException("Reconozca explícitamente los vencimientos para continuar."); }, 800);
+        return dialog.ShowDialog() == true;
     }
     public static Dictionary<string, int>? Mapping(Window owner, SheetData sheet, OperatorSettings settings, bool force)
     {
