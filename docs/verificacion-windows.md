@@ -12,6 +12,15 @@ Fecha: 23 de octubre de 2026. Estación Windows 10.0.26300, arquitectura x64. SD
 - Rendimiento de validación: prueba de 1.000 filas por debajo de 5 segundos. Todavía falta medir lectura completa de libro y vista previa.
 - Revisión propia antes de merge: comprobados los límites del lector XML (DTD deshabilitada y tamaño acotado), las referencias explícitas de fotos sin sustituciones silenciosas, las fechas sin hora, la ausencia de datos personales en ajustes y los estados parciales sin reintento automático. `git diff --check` sin incidencias.
 
+## Tarea 2: interfaz y composición
+
+- Interfaz WPF en español con selección explícita, búsqueda por campos sin acentos, asociación de columnas, carpeta de fotos, reasociación explícita, encuadre y revisión completa de seleccionados (incluidos ocultos).
+- Carga y decodificación en tareas de fondo. La sesión anterior se reemplaza únicamente después de leer, asociar, validar y guardar correctamente los nuevos ajustes.
+- Perfil local versionado CR80 y un solo compositor para renderizar ambas caras. Diez valores variables, foto con proporción conservada y textos que bloquean la fila si no caben a 7 puntos. El reverso es independiente de los datos personales.
+- `dotnet test tests/Carnets.Tests --no-restore`: 40 pruebas aprobadas, incluidas seis pruebas WPF en STA. Se renderizaron el frente/reverso sintéticos y la ventana real en `artifacts/verification/` (no versionados). Inspección visual realizada; se corrigió el desbordamiento de la cabecera institucional antes de mergear.
+- Revisión propia: se corrigió la selección por casilla dentro de la tabla de solo lectura y se situó la revisión de selección inmediatamente después de la vista previa. La configuración no cambia de impresora automáticamente y los perfiles corruptos requieren restablecimiento explícito conservando copia.
+- La interfaz de envío, el seguimiento de cola y el paquete se completan en las tareas siguientes. Logo y firmas siguen siendo recursos de producción pendientes; el perfil inicial no se declara aprobado.
+
 ## Impresora y límites actuales
 
 `Get-Printer` enumera OneNote, Microsoft Print to PDF, Fax y EPSON L4260; no hay ZC300 instalada. El usuario confirmó que no dispone de una ZC300 y solicitó explorar la emulación.
