@@ -1,0 +1,22 @@
+{
+  "Passed": true,
+  "Runtime": "10.0.11",
+  "OS": "Microsoft Windows NT 10.0.26300.0",
+  "Checks": [
+    "WPF abre con dos titulares ficticios sin selecci\u00F3n autom\u00E1tica",
+    "Frente compuesto sin desbordamientos",
+    "Reverso compuesto sin desbordamientos",
+    "Autom\u00E1tico: dos trabajos de dos caras y cuatro tarjetas simuladas",
+    "Manual: cuatro ciclos completos, con pausa entre caras y sin cruzar titulares",
+    "Fallo parcial: primer titular aceptado, segundo incierto, sin reintento",
+    "Lectura y validaci\u00F3n de XLSX con 1.000 filas en menos de 5 segundos",
+    "Ventana en menos de 5 segundos y vistas en menos de 1 segundo"
+  ],
+  "Metrics": {
+    "WindowStartupMilliseconds": 691.3434,
+    "BothPreviewsMilliseconds": 45.0812,
+    "ReadAndValidate1000Milliseconds": 108.0999
+  },
+  "PhysicalZebraVerified": false,
+  "ArtworkApproved": false
+}

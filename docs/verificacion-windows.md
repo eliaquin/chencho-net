@@ -31,6 +31,18 @@ Fecha: 23 de octubre de 2026. Estación Windows 10.0.26300, arquitectura x64. SD
 - Revisión propia antes del merge: corregida la posibilidad de releer arte mutable durante el envío. Se congelan los dibujos preparados y se comprueba la huella de los recursos antes/después de prepararlos. Las fotos cambiadas requieren nueva revisión; no se reenvía automáticamente un resultado incierto. `git diff --check` correcto.
 - La integración del controlador, el orden físico de caras y los fallos reales de ZC300 permanecen sin ejecutar por ausencia de hardware. No se cuentan como pruebas aprobadas.
 
+## Tarea 4: paquete de evaluación y auditoría
+
+- `dotnet test tests/Carnets.Tests`: 55 pruebas aprobadas. Se ejercitaron la ventana y los diálogos WPF reales: recarga con filtro/selección previos, archivo inválido conservando la sesión, asociaciones reordenadas, elección explícita entre columnas ambiguas y cancelación de confirmación sin crear lote.
+- Se comprobó la reasociación y decodificación de los dos PNG del RAR original con sus filas del Excel. No se copiaron sus datos o retratos a los entregables.
+- La verificación instalada detectó un `BitmapFrame` que conservaba afinidad con el decodificador de otro hilo. Se corrigió copiando píxeles a un `BitmapSource` independiente e inmutable; regresión específica aprobada. La vista previa vuelve explícitamente al dispatcher propietario y descarta cargas obsoletas al cerrar o cambiar de fila.
+- Auditoría del perfil: posiciones y fuentes de elementos fijos pasaron a JSON, se bloquean campos superpuestos y se guarda el perfil inicial de forma atómica. La caché retiene únicamente el retrato visible y las huellas de los demás; los dibujos del adaptador se liberan después de completar el envío.
+- ZIP autocontenido Windows x64, runtime/WPF 10.0.11, instalación por usuario y guía en español. Instalado desde el ZIP extraído en una carpeta nueva, con configuración aislada y sin depender del directorio de compilación. `--self-check` terminó con código 0.
+- Última medición desde el paquete instalado: ventana **691 ms**, dos vistas **45 ms**, lectura y validación de XLSX con 1.000 filas **108 ms**, sin decodificación completa de sus fotos. [Informe estructurado](evidencia-software.json).
+- Diagnóstico del paquete: dos titulares ficticios, dos trabajos automáticos con dos copias (cuatro tarjetas simuladas), ocho caras manuales con cuatro pausas y fallo parcial incierto sin reintento. No se accedió a impresoras físicas durante el diagnóstico.
+- Revisados contenido del ZIP, licencias de runtime/WPF, ausencia de materiales personales, configuración fuera del programa, rutas relativas de recursos y ausencia de envío automático al abrir. No hay base de titulares ni historial persistente.
+- [Matriz de los 25 criterios](aceptacion.md) completada con evidencia y pendientes explícitos. La etapa de aceptación física no está cerrada. No se alteró la conectividad ni el escalado global de Windows del usuario para aparentar pruebas no ejecutadas.
+
 ## Impresora y límites actuales
 
 `Get-Printer` enumera OneNote, Microsoft Print to PDF, Fax y EPSON L4260; no hay ZC300 instalada. El usuario confirmó que no dispone de una ZC300 y solicitó explorar la emulación.

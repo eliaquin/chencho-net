@@ -76,14 +76,14 @@ public sealed class CoreTests : IDisposable
     [Theory][InlineData("1", 1)][InlineData("100", 100)][InlineData("2", 2)]
     public void CopiesAcceptValidIntegers(string text, int expected) => Assert.Equal(expected, Selection.ParseCopies(text));
 
-    private string Workbook(bool cached = false)
+    private string Workbook(bool cached = false, string mask = "000000")
     {
         string path = Path.Combine(temp, "test.xlsx");
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         void Put(string part, string xml) { using var writer = new StreamWriter(zip.CreateEntry(part).Open()); writer.Write(xml); }
         Put("xl/workbook.xml", "<workbook xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'><sheets><sheet name='Hoja1' r:id='rId1'/></sheets></workbook>");
         Put("xl/_rels/workbook.xml.rels", "<Relationships><Relationship Id='rId1' Target='worksheets/sheet1.xml' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet'/></Relationships>");
-        Put("xl/styles.xml", "<styleSheet><numFmts><numFmt numFmtId='164' formatCode='000000'/></numFmts><cellXfs><xf numFmtId='0'/><xf numFmtId='164'/></cellXfs></styleSheet>");
+        Put("xl/styles.xml", $"<styleSheet><numFmts>{new XElement("numFmt", new XAttribute("numFmtId", "164"), new XAttribute("formatCode", mask))}</numFmts><cellXfs><xf numFmtId='0'/><xf numFmtId='164'/></cellXfs></styleSheet>");
         Put("xl/worksheets/sheet1.xml", $"<worksheet><sheetData><row r='1'><c r='A1' t='inlineStr'><is><t>MATRÍCULA</t></is></c></row><row r='2'/><row r='5'><c r='A5' s='1'><v>123</v></c><c r='B5'><f>1+1</f>{(cached ? "<v>2</v>" : "")}</c></row></sheetData></worksheet>");
         return path;
     }
@@ -95,6 +95,11 @@ public sealed class CoreTests : IDisposable
     [Fact] public void ReaderUsesCachedFormulaWithoutCalculating()
     {
         using var book = new WorkbookReader(Workbook(true)); var cell = Assert.Single(book.Load("Hoja1").Rows).Cells[1]; Assert.Equal("2", cell.Display); Assert.Null(cell.Error);
+    }
+    [Theory][InlineData("000-0000000-0", "000-0000012-3")][InlineData("\"ID0-\"000000", "ID0-000123")][InlineData("(000000)", "(000123)")]
+    public void ReaderPreservesExplicitIdentifierMasks(string mask, string expected)
+    {
+        using var book = new WorkbookReader(Workbook(false, mask)); Assert.Equal(expected, Assert.Single(book.Load("Hoja1").Rows).Cells[0].Display);
     }
     [Fact] public void ReaderRejectsInvalidFileAndDoesNotWriteOriginal()
     {

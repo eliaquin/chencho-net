@@ -1,6 +1,6 @@
 # Plan de implementación por etapas
 
-Fecha: 23 de octubre de 2026. Base: especificaciones versión 1.0. Estado: etapa 0 y núcleo implementados; interfaz en desarrollo y validación física pendiente.
+Fecha: 23 de octubre de 2026. Base: especificaciones versión 1.0. Estado: aplicación y paquete de evaluación implementados; aceptación física y arte final pendientes.
 
 ## 1. Punto de partida
 
@@ -61,7 +61,7 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 **Objetivo:** resolver tamaño físico, alimentación y ambas caras antes de construir toda la interfaz.
 
 - [ ] E1.1. Instalar o comprobar el controlador Windows de Zebra. Registrar versión, nombre exacto de la cola, conexión, tipo de cinta, material y opciones instaladas. Confirmar si la unidad tiene dúplex automático.
-- [ ] E1.2. Crear una composición WPF de prueba CR80 horizontal con marcas de calibración, texto ficticio y caras claramente distintas. Utilizar un punto de entrada de diagnóstico dentro de la solución; no construir una segunda aplicación de producción.
+- [x] E1.2. Crear una composición WPF de prueba CR80 horizontal con marcas de calibración, texto ficticio y caras claramente distintas. Utilizar un punto de entrada de diagnóstico dentro de la solución; no construir una segunda aplicación de producción.
 - [ ] E1.3. Implementar el adaptador mínimo para enumerar impresoras, elegir expresamente la ZC300, configurar tamaño/orientación y enviar un trabajo. Comprobar que se distingue aceptación de la cola de salida física.
 - [ ] E1.4. Imprimir por ambas caras. Si existe dúplex, comprobar orden y giro; si se necesita modo manual, comprobar alimentación y reinserción con una sola tarjeta. Documentar pasos y orientación con un esquema sencillo.
 - [ ] E1.5. Medir escala y desplazamiento en tres tarjetas y registrar offsets por cara y giro del reverso. Comprobar también impresora ausente y fallo de envío sin cambiar a una impresora alternativa.
@@ -75,12 +75,12 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** convertir el archivo incluido en registros utilizables, sin perder información ni modificar la fuente.
 
-- [ ] E2.1. Definir el modelo del titular con los once campos, matrícula como identificador, fila de origen y errores/advertencias. Conservar matrícula, cédula y exequátur como texto y las fechas sin hora.
-- [ ] E2.2. Elegir un lector `.xlsx` compatible con la distribución prevista. Verificar licencia y comportamiento con fechas, valores calculados e identificadores con formato; fijar la versión utilizada. Leer archivos sin automatizar Excel ni ejecutar cálculos o conexiones externas.
-- [ ] E2.3. Implementar selección de archivo y hoja, reconocimiento de los once encabezados, normalización y asociación manual cuando falten coincidencias o haya ambigüedad. Mostrar columnas adicionales sin convertirlas en campos nuevos del carnet.
-- [ ] E2.4. Implementar validación por fila: obligatorios, matrículas duplicadas, fechas inválidas, expiración anterior a admisión y advertencia de vencimiento. Aplicar `-` a segundo nombre/apellido vacíos conforme al diseño.
-- [ ] E2.5. Conservar la carga anterior si falla un archivo nuevo. Al recargar correctamente, limpiar la selección y preservar la referencia a la hoja y fila original para los errores.
-- [ ] E2.6. Añadir pruebas con el esquema del archivo incluido y variantes sintéticas: encabezados con espacios/acentos, reordenados o duplicados; matrícula con ceros; fechas de Excel y texto; fórmula sin valor disponible; archivo inválido. Mantener intactos los materiales originales.
+- [x] E2.1. Definir el modelo del titular con los once campos, matrícula como identificador, fila de origen y errores/advertencias. Conservar matrícula, cédula y exequátur como texto y las fechas sin hora.
+- [x] E2.2. Elegir un lector `.xlsx` compatible con la distribución prevista. Verificar licencia y comportamiento con fechas, valores calculados e identificadores con formato; fijar la versión utilizada. Leer archivos sin automatizar Excel ni ejecutar cálculos o conexiones externas.
+- [x] E2.3. Implementar selección de archivo y hoja, reconocimiento de los once encabezados, normalización y asociación manual cuando falten coincidencias o haya ambigüedad. Mostrar columnas adicionales sin convertirlas en campos nuevos del carnet.
+- [x] E2.4. Implementar validación por fila: obligatorios, matrículas duplicadas, fechas inválidas, expiración anterior a admisión y advertencia de vencimiento. Aplicar `-` a segundo nombre/apellido vacíos conforme al diseño.
+- [x] E2.5. Conservar la carga anterior si falla un archivo nuevo. Al recargar correctamente, limpiar la selección y preservar la referencia a la hoja y fila original para los errores.
+- [x] E2.6. Añadir pruebas con el esquema del archivo incluido y variantes sintéticas: encabezados con espacios/acentos, reordenados o duplicados; matrícula con ceros; fechas de Excel y texto; fórmula sin valor disponible; archivo inválido. Mantener intactos los materiales originales.
 
 **Entregable:** tabla de titulares, asociación de columnas y validación comprobada.
 
@@ -90,12 +90,12 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** elegir exactamente a quién imprimir y mantener su relación con la fotografía.
 
-- [ ] E3.1. Extraer las imágenes del RAR a una carpeta local de trabajo. La aplicación utilizará una carpeta de fotos; no necesita descomprimir RAR como función del producto.
-- [ ] E3.2. Implementar la resolución de `FOTOS`: ruta absoluta existente, ruta relativa o nombre bajo la carpeta elegida. Ofrecer reasociación explícita cuando una ruta pertenezca a otra computadora.
-- [ ] E3.3. Resolver por matrícula únicamente cuando `FOTOS` esté vacío; gestionar coincidencias múltiples, archivos ausentes e ilegibles, y advertir resolución efectiva inferior a 150 ppp. No sustituir automáticamente una referencia explícita fallida.
-- [ ] E3.4. Incorporar encuadre centrado y ajuste de recorte en memoria, sin deformar ni modificar las fotos originales.
-- [ ] E3.5. Implementar búsqueda por matrícula, cédula, nombre y apellido; selección individual y de resultados filtrados; conteo de seleccionados ocultos y limpieza total. Mantener identidad y foto al ordenar o filtrar.
-- [ ] E3.6. Verificar rutas trasladadas, dos extensiones para una matrícula, foto corrupta, cambio de selección y filtros. Comprobar que una fila con error nunca muestra la foto del titular anterior.
+- [x] E3.1. Extraer las imágenes del RAR a una carpeta local de trabajo. La aplicación utilizará una carpeta de fotos; no necesita descomprimir RAR como función del producto.
+- [x] E3.2. Implementar la resolución de `FOTOS`: ruta absoluta existente, ruta relativa o nombre bajo la carpeta elegida. Ofrecer reasociación explícita cuando una ruta pertenezca a otra computadora.
+- [x] E3.3. Resolver por matrícula únicamente cuando `FOTOS` esté vacío; gestionar coincidencias múltiples, archivos ausentes e ilegibles, y advertir resolución efectiva inferior a 150 ppp. No sustituir automáticamente una referencia explícita fallida.
+- [x] E3.4. Incorporar encuadre centrado y ajuste de recorte en memoria, sin deformar ni modificar las fotos originales.
+- [x] E3.5. Implementar búsqueda por matrícula, cédula, nombre y apellido; selección individual y de resultados filtrados; conteo de seleccionados ocultos y limpieza total. Mantener identidad y foto al ordenar o filtrar.
+- [x] E3.6. Verificar rutas trasladadas, dos extensiones para una matrícula, foto corrupta, cambio de selección y filtros. Comprobar que una fila con error nunca muestra la foto del titular anterior.
 
 **Entregable:** selección estable y fotos preparadas para composición.
 
@@ -106,11 +106,11 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 **Objetivo:** reproducir la composición de referencia con dimensiones físicas controladas.
 
 - [ ] E4.1. Preparar logo, fondo y firmas a partir de originales o de una extracción de calidad revisable. Mantener los gráficos separados de los datos variables; usar marcadores provisionales solo durante desarrollo y registrar los recursos que falten.
-- [ ] E4.2. Crear el perfil JSON versionado con lienzo CR80 horizontal, recursos relativos, fuentes, posiciones, límites de texto y marco de foto.
-- [ ] E4.3. Construir el frente con diez valores textuales y fotografía, respetando las cinco filas de dos campos. Vincular `FILIAL` a Provincia y conservar separados los dos nombres y los dos apellidos.
-- [ ] E4.4. Construir el reverso fijo con su cabecera, leyenda y bloques de firmas. Usar el mismo reverso para todos los titulares.
-- [ ] E4.5. Implementar un compositor de cada cara compartido por vista previa e impresión. Añadir cambio de cara y zoom, ajuste de texto hasta 7 puntos y error de desbordamiento cuando no quepa.
-- [ ] E4.6. Revisar el diseño con datos sintéticos normales y extremos, opcionales vacíos y fotos de proporciones distintas. Comparar distribución y textos con las fotografías de referencia.
+- [x] E4.2. Crear el perfil JSON versionado con lienzo CR80 horizontal, recursos relativos, fuentes, posiciones, límites de texto y marco de foto.
+- [x] E4.3. Construir el frente con diez valores textuales y fotografía, respetando las cinco filas de dos campos. Vincular `FILIAL` a Provincia y conservar separados los dos nombres y los dos apellidos.
+- [x] E4.4. Construir el reverso fijo con su cabecera, leyenda y bloques de firmas. Usar el mismo reverso para todos los titulares.
+- [x] E4.5. Implementar un compositor de cada cara compartido por vista previa e impresión. Añadir cambio de cara y zoom, ajuste de texto hasta 7 puntos y error de desbordamiento cuando no quepa.
+- [x] E4.6. Revisar el diseño con datos sintéticos normales y extremos, opcionales vacíos y fotos de proporciones distintas. Comparar distribución y textos con las fotografías de referencia.
 
 **Entregable:** perfil del carnet, frente/reverso y vista previa vinculada a la selección.
 
@@ -120,12 +120,12 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** completar el flujo desde una selección válida hasta el seguimiento de sus envíos.
 
-- [ ] E5.1. Crear el plan de impresión con orden, matrículas, caras, copias, perfil e impresora. Mostrar toda la selección antes de confirmar, incluidos los resultados ocultos por filtros. Validar copias enteras de 1 a 100 y reconocimiento de vencimientos.
-- [ ] E5.2. Bloquear cambios incompatibles durante la preparación/envío, comprobar recursos y detectar fotos cambiadas o eliminadas después de revisarlas. Impedir doble envío por doble clic y mostrar errores de la selección sin excluir filas silenciosamente.
+- [x] E5.1. Crear el plan de impresión con orden, matrículas, caras, copias, perfil e impresora. Mostrar toda la selección antes de confirmar, incluidos los resultados ocultos por filtros. Validar copias enteras de 1 a 100 y reconocimiento de vencimientos.
+- [x] E5.2. Bloquear cambios incompatibles durante la preparación/envío, comprobar recursos y detectar fotos cambiadas o eliminadas después de revisarlas. Impedir doble envío por doble clic y mostrar errores de la selección sin excluir filas silenciosamente.
 - [ ] E5.3. Integrar dúplex automático cuando esté disponible: un trabajo por titular con frente y reverso consecutivos y cantidad de copias. Verificar físicamente asociación y conteos con dos titulares distintos.
 - [ ] E5.4. Integrar la secuencia manual cuando sea necesaria: titular y copia bloqueados, frente, pausa, reinserción confirmada y reverso. No pasar a la tarjeta siguiente sin resolver la actual. Si la estación utiliza solo dúplex automático, documentar esta condición y el estado del modo manual, sin habilitar una modalidad no verificada.
-- [ ] E5.5. Implementar estados y resumen de sesión: enviado a la cola, pendiente, incompleto, error y resultado desconocido. Conservar identificadores de trabajos cuando sea posible, sin afirmar emisión física por la sola aceptación de Windows.
-- [ ] E5.6. Implementar detención de nuevos envíos y recuperación explícita de una cara con identificación del titular. Nunca reintentar tras una incertidumbre ni reanudar al reiniciar.
+- [x] E5.5. Implementar estados y resumen de sesión: enviado a la cola, pendiente, incompleto, error y resultado desconocido. Conservar identificadores de trabajos cuando sea posible, sin afirmar emisión física por la sola aceptación de Windows.
+- [x] E5.6. Implementar detención de nuevos envíos y recuperación explícita de una cara con identificación del titular. Nunca reintentar tras una incertidumbre ni reanudar al reiniciar.
 - [ ] E5.7. Probar conteos, duplicación, cancelación previa, selección inválida y transiciones con un adaptador simulado. Probar en la ZC300 errores de envío, interrupción parcial y las modalidades habilitadas; registrar lo que la cola permite conocer y lo que debe revisar el operador.
 
 **Entregable:** flujo completo, resumen de sesión y recuperación controlada.
@@ -136,11 +136,11 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** hacer que la aplicación sea utilizable entre sesiones y en condiciones normales de la estación.
 
-- [ ] E6.1. Guardar asociación de columnas, carpeta de fotos, impresora, modalidad y calibración bajo el usuario Windows con esquema versionado y escritura atómica. Separar ajustes del operador de los recursos del programa instalado.
-- [ ] E6.2. Gestionar configuración corrupta o incompatible mediante restablecimiento explícito. Conservar ajustes compatibles entre versiones y no almacenar filas del Excel, fotos, recortes por titular ni historial persistente.
-- [ ] E6.3. Confirmar pérdida de recortes cuando corresponda al cerrar o recargar. Verificar que abrir la aplicación no restaura una selección lista para imprimir ni envía trabajos.
+- [x] E6.1. Guardar asociación de columnas, carpeta de fotos, impresora, modalidad y calibración bajo el usuario Windows con esquema versionado y escritura atómica. Separar ajustes del operador de los recursos del programa instalado.
+- [x] E6.2. Gestionar configuración corrupta o incompatible mediante restablecimiento explícito. Conservar ajustes compatibles entre versiones y no almacenar filas del Excel, fotos, recortes por titular ni historial persistente.
+- [x] E6.3. Confirmar pérdida de recortes cuando corresponda al cerrar o recargar. Verificar que abrir la aplicación no restaura una selección lista para imprimir ni envía trabajos.
 - [ ] E6.4. Revisar navegación por teclado, mensajes con hoja/fila/campo y escalados de pantalla de 100 %, 125 % y 150 %. Mantener operativa la interfaz durante carga, preparación y seguimiento de trabajos.
-- [ ] E6.5. Medir arranque, carga de 1.000 filas sintéticas y actualización de vista previa en la estación documentada. Corregir únicamente los problemas que impidan cumplir los objetivos de las especificaciones.
+- [x] E6.5. Medir arranque, carga de 1.000 filas sintéticas y actualización de vista previa en la estación documentada. Corregir únicamente los problemas que impidan cumplir los objetivos de las especificaciones.
 - [ ] E6.6. Verificar el flujo con Internet desconectado y revisar que los registros técnicos no incluyan datos personales ni imágenes. Añadir regresiones de configuración y de las reglas que hayan fallado durante la integración.
 
 **Entregable:** configuración persistente, interfaz operativa y resultados de rendimiento.
@@ -151,11 +151,11 @@ El orden recomendado es 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7. Si falta te
 
 **Objetivo:** entregar una aplicación que funcione desde su paquete de distribución y produzca el carnet definitivo.
 
-- [ ] E7.1. Preparar el paquete para la arquitectura Windows de la estación, incluir recursos del perfil y resolver los componentes de ejecución de .NET. Documentar instalación del controlador de Zebra y requisitos para trabajar sin conexión.
+- [x] E7.1. Preparar el paquete para la arquitectura Windows de la estación, incluir recursos del perfil y resolver los componentes de ejecución de .NET. Documentar instalación del controlador de Zebra y requisitos para trabajar sin conexión.
 - [ ] E7.2. Instalar desde el paquete en un entorno de prueba o perfil limpio y ejecutar sin depender de rutas del desarrollador ni permisos de administrador para el uso diario. Verificar actualización conservando ajustes compatibles.
 - [ ] E7.3. Imprimir el diseño definitivo con arte limpio y datos controlados. Revisar frente, reverso, foto, leyendas, firmas, escala, posición y legibilidad en tres tarjetas consecutivas conforme a las tolerancias especificadas.
-- [ ] E7.4. Completar la matriz de los 25 criterios de aceptación con resultado, evidencia y defectos pendientes. Documentar los no aplicables por modalidad instalada; no marcar como aprobados escenarios no ejecutados.
-- [ ] E7.5. Entregar guía breve en español: cargar Excel, elegir carpeta de fotos, corregir errores, revisar selección, imprimir, reinsertar si corresponde, recuperar una cara y consultar la cola de Windows.
+- [x] E7.4. Completar la matriz de los 25 criterios de aceptación con resultado, evidencia y defectos pendientes. Documentar los no aplicables por modalidad instalada; no marcar como aprobados escenarios no ejecutados.
+- [x] E7.5. Entregar guía breve en español: cargar Excel, elegir carpeta de fotos, corregir errores, revisar selección, imprimir, reinsertar si corresponde, recuperar una cara y consultar la cola de Windows.
 - [ ] E7.6. Entregar código fuente, paquete instalable, perfil final y ficha de configuración de la estación. Retirar o restringir las acciones temporales de diagnóstico para que no se confundan con la operación habitual.
 
 **Entregable:** paquete instalado y documentación de aceptación.
@@ -179,19 +179,19 @@ Las referencias CA corresponden a la sección 8 de las especificaciones. La etap
 
 Marcar una tarea como completada solo cuando exista su entregable y se haya realizado su comprobación. Al finalizar una sesión, actualizar esta tabla, las casillas afectadas y `docs/verificacion-windows.md`. Registrar los problemas concretos y su siguiente acción; no confundir la ausencia temporal de impresora con un fallo de los componentes que pueden probarse sin ella.
 
-| Etapa | Estado inicial | Evidencia al comenzar |
+| Etapa | Estado actual | Evidencia actual |
 | --- | --- | --- |
 | 0 | Completada | Solución compilada, 34 pruebas y ventana WPF abierta; ver verificacion-windows.md |
-| 1 | Pendiente | Sin prueba física |
-| 2 | Pendiente | Material Excel disponible |
-| 3 | Pendiente | Fotos de prueba disponibles dentro del RAR |
-| 4 | Pendiente | Fotografías del carnet disponibles; arte por preparar |
-| 5 | Pendiente | Sin implementación |
-| 6 | Pendiente | Sin implementación |
-| 7 | Pendiente | Sin paquete ni aceptación |
+| 1 | Pendiente de hardware | Patrón y adaptador implementados; sin ZC300 real |
+| 2 | Implementada y probada en software | Excel real, asociaciones y recarga; ver aceptacion.md |
+| 3 | Implementada y probada en software | Dos fotos originales, selección/filtro/orden y encuadre |
+| 4 | Composición implementada; arte pendiente | Perfil configurable, vistas y mínimo de 7 pt; faltan originales institucionales |
+| 5 | Simulación probada; físico pendiente | Automático/manual, fallos, detención y recuperación; sin validación ZC300 |
+| 6 | Parcial | Configuración, rendimiento y paquete probados; falta escalado real y red desconectada |
+| 7 | Paquete de evaluación disponible | Instalador por usuario y matriz; aceptación física no completada |
 
-**Siguiente tarea: interfaz de carga, asociación de columnas y vista previa (etapas 2–4). Etapa 1 pendiente de hardware.**
+**Siguientes acciones: incorporar arte institucional original, ejecutar la etapa 1 con una ZC300 real y completar los escenarios pendientes de aceptacion.md. La simulación no cierra la aceptación física.**
 
 Mensaje sugerido para iniciar una nueva sesión de desarrollo:
 
-> Lee `docs/especificaciones-carnets.md`, `docs/evaluacion-tecnologica.md` y `docs/plan-implementacion.md`. Estoy trabajando directamente en Windows. Comienza por la primera tarea pendiente de la etapa 0 y verifica el entorno real antes de crear la solución .NET 10 con WPF. Actualiza las casillas y registra las comprobaciones. Al cerrar la etapa 0, comienza la etapa 1 si la ZC300 está disponible; si no lo está, documenta esa dependencia y continúa con la etapa 2.
+> Lee `docs/aceptacion.md`, `docs/verificacion-windows.md` y este plan. La aplicación, las pruebas y el paquete de evaluación ya existen. Revalida el estado de main y comienza por un requisito pendiente: arte institucional, estación Zebra o escenarios de aceptación real. Conserva los materiales originales y no marques pruebas físicas como aprobadas a partir del simulador.

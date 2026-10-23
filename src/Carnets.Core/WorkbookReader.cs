@@ -93,7 +93,7 @@ public sealed class WorkbookReader : IDisposable
                 {
                     value = numberValue.ToString("G17", CultureInfo.InvariantCulture);
                     string section = format.Split(';')[0];
-                    if (Regex.IsMatch(section, "^0{2,}$") && numberValue == Math.Truncate(numberValue)) { value = numberValue.ToString(section, CultureInfo.InvariantCulture); padded = true; }
+                    if (numberValue >= 0 && numberValue == Math.Truncate(numberValue) && TryIdentifierMask(section, numberValue, out string formatted)) { value = formatted; padded = true; }
                 }
                 if (type == "e") error = "Excel contiene un error; corrija la celda en el archivo original.";
                 if (Children(cell, "f").Any() && raw.Length == 0) error = "Fórmula sin valor calculado disponible; calcule y guarde el Excel antes de cargarlo.";
@@ -107,4 +107,30 @@ public sealed class WorkbookReader : IDisposable
         return new(name, Enumerable.Range(0, count).Select(i => header.Cells.GetValueOrDefault(i, CellData.Empty).Display).ToList(), rows.Where(r => r.Number != 1).ToList(), Date1904);
     }
     public void Dispose() => archive.Dispose();
+    private static bool TryIdentifierMask(string mask, double value, out string formatted)
+    {
+        formatted = "";
+        var tokens = new List<(char Character, bool Placeholder)>();
+        bool quoted = false;
+        for (int i = 0; i < mask.Length; i++)
+        {
+            char c = mask[i];
+            if (c == '"') { quoted = !quoted; continue; }
+            if (c == '\\' && !quoted && i + 1 < mask.Length) { tokens.Add((mask[++i], false)); continue; }
+            if (!quoted && c != '0' && c is not ('-' or ' ' or '(' or ')')) return false;
+            tokens.Add((c, !quoted && c == '0'));
+        }
+        int zeros = tokens.Count(t => t.Placeholder);
+        if (quoted || zeros < 2) return false;
+        string digits = value.ToString("0", CultureInfo.InvariantCulture).PadLeft(zeros, '0');
+        int position = 0;
+        var output = new System.Text.StringBuilder();
+        foreach (var token in tokens)
+        {
+            if (!token.Placeholder) { output.Append(token.Character); continue; }
+            if (position == 0 && digits.Length > zeros) { output.Append(digits.AsSpan(0, digits.Length - zeros)); position += digits.Length - zeros; }
+            output.Append(digits[position++]);
+        }
+        formatted = output.ToString(); return true;
+    }
 }

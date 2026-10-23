@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private string? loadedFile;
     private bool initialized, busy, syncingCrop;
     private int previewGeneration;
+    private readonly string demoDirectory = Path.Combine(Path.GetTempPath(), "ChenchoNet-demo-" + Guid.NewGuid().ToString("N"));
     private CancellationTokenSource? pending;
     private readonly List<(PrintRun Run, bool Simulated)> sessionRuns = [];
     private HolderRow? Current => Records.SelectedItem as HolderRow;
@@ -37,7 +38,29 @@ public partial class MainWindow : Window
         Records.ItemsSource = rows;
         view = CollectionViewSource.GetDefaultView(rows);
         view.Filter = value => value is HolderRow row && row.Holder.Matches(SearchBox.Text);
+        Closed += (_, _) =>
+        {
+            previewGeneration++;
+            string full = Path.GetFullPath(demoDirectory);
+            string parent = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+            if (Path.GetDirectoryName(full) == parent && Path.GetFileName(full).StartsWith("ChenchoNet-demo-", StringComparison.Ordinal) && Directory.Exists(full))
+                try { Directory.Delete(full, true); } catch (IOException) { /* Only synthetic files; a later OS cleanup can remove them. */ }
+        };
     }
+    internal IReadOnlyList<HolderRow> SessionRows => rows;
+    internal void LoadDemoSession()
+    {
+        if (busy || composer is null || !ConfirmDiscard()) return;
+        previewGeneration++; rows.Clear();
+        foreach (var row in SyntheticData.Create(demoDirectory)) { row.Changed = Counts; rows.Add(row); }
+        loadedFile = null; SearchBox.Clear(); view?.Refresh();
+        FileLabel.Text = "DEMOSTRACIÓN · dos titulares ficticios";
+        settings.Mode = PrintMode.SimulationAutomatic; Labels();
+        Records.SelectedItem = rows[0];
+        StatusText.Text = "Datos ficticios cargados sin selección automática. Marque los titulares que desee simular.";
+    }
+    private void LoadDemo(object sender, RoutedEventArgs e) { try { LoadDemoSession(); } catch (Exception ex) { Error(ex); } }
+    private void DisplayZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e) { if (initialized) Preview.Width = 420 * DisplayZoom.Value; }
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
         try
@@ -62,7 +85,12 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) { Error(ex); Close(); }
     }
-    private void Error(Exception error) => MessageBox.Show(this, error is InvalidDataException ? error.Message : "No se pudo completar la operación. Revise el archivo, los permisos y los recursos locales.\n" + error.Message, "Carnets", MessageBoxButton.OK, MessageBoxImage.Warning);
+    internal Action<Exception>? ErrorHandler { get; set; }
+    private void Error(Exception error)
+    {
+        if (ErrorHandler is not null) { ErrorHandler(error); return; }
+        MessageBox.Show(this, error is InvalidDataException ? error.Message : "No se pudo completar la operación. Revise el archivo, los permisos y los recursos locales.\n" + error.Message, "Carnets", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
     private bool ConfirmDiscard() => !rows.Any(r => r.Crop != new Crop()) || MessageBox.Show(this, "Se perderán los encuadres de esta sesión. ¿Continuar?", "Encuadres", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
     private void WindowClosing(object? sender, CancelEventArgs e)
     {
@@ -96,7 +124,7 @@ public partial class MainWindow : Window
         if (picker.ShowDialog(this) == true) await LoadFileAsync(picker.FileName, false);
     }
     private async void Remap(object sender, RoutedEventArgs e) { if (!busy && loadedFile is not null) await LoadFileAsync(loadedFile, true); }
-    private async Task LoadFileAsync(string path, bool forceMapping)
+    internal async Task LoadFileAsync(string path, bool forceMapping)
     {
         if (!ConfirmDiscard()) return;
         SetBusy(true); StatusText.Text = "Leyendo Excel…";
@@ -113,7 +141,7 @@ public partial class MainWindow : Window
             // Commit the new session only after the whole read, association and validation succeeds.
             settings = nextSettings; previewGeneration++; rows.Clear();
             foreach (var row in incoming) { row.Changed = Counts; rows.Add(row); }
-            loadedFile = path; SearchBox.Clear(); FileLabel.Text = Path.GetFileName(path) + " · " + name;
+            loadedFile = path; SearchBox.Clear(); view?.Refresh(); FileLabel.Text = Path.GetFileName(path) + " · " + name;
             Preview.Child = null; CurrentLabel.Text = "Elija una fila para revisarla"; Details.Clear(); RunSummary.Clear(); Counts();
             StatusText.Text = $"Carga completada: {rows.Count} titulares. Selección vacía. Revise fotos y errores antes de imprimir.";
         }
@@ -122,7 +150,7 @@ public partial class MainWindow : Window
     }
     private void Resolve(HolderRow row, bool relocate = false)
     {
-        row.Photo = null; row.LayoutErrors.Clear(); row.LowResolution = false;
+        row.Photo = null; row.ReviewedPhotoHash = ""; row.PhotoValidated = false; row.LayoutErrors.Clear(); row.LowResolution = false;
         try { var resolution = PhotoResolver.Resolve(row.Holder["referenciaFoto"], row.Matricula, settings.PhotosFolder, relocate); row.PhotoPath = resolution.Path; row.PhotoError = resolution.Error; }
         catch (Exception) { row.PhotoPath = null; row.PhotoError = "No se pudo resolver la ruta de la foto. Elija un archivo PNG/JPEG accesible."; }
     }
@@ -172,17 +200,29 @@ public partial class MainWindow : Window
     {
         int generation = ++previewGeneration; var row = Current;
         Preview.Child = null;
+        // Retain hashes/validation, not all decoded portraits, while browsing large books.
+        foreach (var other in rows.Where(r => r != row)) other.Photo = null;
         if (row is null) { CurrentLabel.Text = "Elija una fila para revisarla"; Details.Clear(); return; }
         CurrentLabel.Text = $"Matrícula {row.Matricula} · {row.Holder.Name}"; Details.Text = row.Details;
         if (row.PhotoPath is not null && row.Photo is null)
         {
+            PreparedPhoto? photo = null;
+            try { photo = await Task.Run(() => PhotoLoader.Load(row.PhotoPath)).ConfigureAwait(false); }
+            catch (Exception) { /* Presented on the owning dispatcher below. */ }
+            if (generation != Volatile.Read(ref previewGeneration)) return;
             try
             {
-                var photo = await Task.Run(() => PhotoLoader.Load(row.PhotoPath));
-                if (generation != previewGeneration || Current != row) return;
-                row.Photo = photo; row.PhotoError = null;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (generation != previewGeneration || Current != row) return;
+                    row.Photo = photo; row.PhotoValidated = photo is not null;
+                    if (photo is not null) { row.ReviewedPhotoHash = photo.Hash; row.PhotoError = null; }
+                    else row.PhotoError = "Archivo de foto ilegible. Elija otro PNG/JPEG.";
+                    RenderPreview();
+                });
             }
-            catch (Exception) { if (generation != previewGeneration || Current != row) return; row.Photo = null; row.PhotoError = "Archivo de foto ilegible. Elija otro PNG/JPEG."; }
+            catch (TaskCanceledException) { /* The window's dispatcher is shutting down. */ }
+            return;
         }
         if (generation == previewGeneration) RenderPreview();
     }
@@ -206,6 +246,7 @@ public partial class MainWindow : Window
             row.LayoutErrors = front.Errors;
             if (row.Photo is not null)
             {
+                row.ReviewedPhotoHash = row.Photo.Hash; row.PhotoValidated = true;
                 double scale = Math.Max(profile.PhotoWidth / row.Photo.Bitmap.PixelWidth, profile.PhotoHeight / row.Photo.Bitmap.PixelHeight) * row.Crop.Zoom;
                 row.LowResolution = 25.4 / scale < 150;
             }
@@ -219,7 +260,7 @@ public partial class MainWindow : Window
         if (busy || Current is not { } row) return;
         var picker = new OpenFileDialog { Filter = "Fotografía PNG/JPEG|*.png;*.jpg;*.jpeg", CheckFileExists = true };
         if (picker.ShowDialog(this) != true) return;
-        row.PhotoPath = picker.FileName; row.Photo = null; row.PhotoError = null; await LoadCurrentPhotoAsync();
+        row.PhotoPath = picker.FileName; row.Photo = null; row.ReviewedPhotoHash = ""; row.PhotoValidated = false; row.PhotoError = null; await LoadCurrentPhotoAsync();
     }
     private async void RelocatePhoto(object sender, RoutedEventArgs e)
     {
@@ -254,10 +295,10 @@ public partial class MainWindow : Window
                 try
                 {
                     var latest = await Task.Run(() => PhotoLoader.Load(row.PhotoPath));
-                    if (row.Photo is not null && row.Photo.Hash != latest.Hash) { row.Photo = null; row.PhotoError = "La foto cambió desde la vista previa. Revise la fila de nuevo antes de enviar."; }
-                    else { row.Photo = latest; row.PhotoError = null; }
+                    if (row.ReviewedPhotoHash.Length > 0 && row.ReviewedPhotoHash != latest.Hash) { row.Photo = null; row.ReviewedPhotoHash = ""; row.PhotoValidated = false; row.PhotoError = "La foto cambió desde la vista previa. Revise la fila de nuevo antes de enviar."; }
+                    else { row.Photo = latest; row.ReviewedPhotoHash = latest.Hash; row.PhotoValidated = true; row.PhotoError = null; }
                 }
-                catch (Exception) { row.Photo = null; row.PhotoError = "Foto ausente o ilegible; seleccione otro archivo."; }
+                catch (Exception) { row.Photo = null; row.PhotoValidated = false; row.PhotoError = "Foto ausente o ilegible; seleccione otro archivo."; }
             }
             row.LayoutErrors = composer.Compose(row.Holder.Values, row.Photo, row.Crop, false).Errors;
             if (row.Photo is not null)
@@ -266,6 +307,7 @@ public partial class MainWindow : Window
                 row.LowResolution = 25.4 / scale < 150;
             }
             row.Refresh();
+            if (row != Current) row.Photo = null;
         }
         var invalid = selected.Where(r => !r.Valid).ToArray();
         if (invalid.Length > 0) throw new InvalidDataException("La selección contiene errores en las filas: " + string.Join(", ", invalid.Select(r => r.Row)) + ". Corrija esas filas o use ‘Quitar seleccionados con error’. No se excluyeron automáticamente.");
@@ -281,7 +323,7 @@ public partial class MainWindow : Window
             var selected = await ReviewRowsAsync(); int copies = Selection.ParseCopies(CopiesBox.Text);
             CardSide side = (CardSide)SideChoice.SelectedIndex;
             if (side != CardSide.Both && (selected.Length != 1 || copies != 1)) throw new InvalidDataException("Para recuperar una cara, seleccione exactamente un titular y una copia. Identifique la tarjeta incompleta antes de confirmar.");
-            var cards = selected.Select(r => new CardSnapshot(r.Matricula, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(r.Holder.Values)), r.PhotoPath!, r.Photo!.Hash, r.Crop,
+            var cards = selected.Select(r => new CardSnapshot(r.Matricula, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(r.Holder.Values)), r.PhotoPath!, r.ReviewedPhotoHash, r.Crop,
                 r.Holder.Issues.Where(i => i.Warning).Select(i => i.Message).Concat(r.LowResolution ? new[] { "Resolución efectiva de foto inferior a 150 ppp." } : []).ToArray())).ToArray();
             await SendCardsAsync(cards, copies, side, selected.Any(r => r.Holder.IsExpired(DateOnly.FromDateTime(DateTime.Now))), false);
         }
@@ -316,13 +358,18 @@ public partial class MainWindow : Window
     }
     private void ShowRunSummary()
     {
+        static string StateText(SubmissionState state) => state switch
+        {
+            SubmissionState.Pending => "Pendiente", SubmissionState.Preparing => "Preparando", SubmissionState.Sending => "Enviando",
+            SubmissionState.Accepted => "Aceptado por la cola", SubmissionState.Incomplete => "Incompleto", SubmissionState.Failed => "Fallido", _ => "Desconocido"
+        };
         var lines = new List<string>();
         for (int i = 0; i < sessionRuns.Count; i++)
         {
             var (run, simulated) = sessionRuns[i];
             int Count(SubmissionState state) => run.Results.Where(r => r.State == state).Sum(r => r.Copies);
             lines.Add($"Lote {i + 1} · {(simulated ? "SIMULACIÓN · cola virtual" : "COLA WINDOWS")}\nTarjetas con ambas caras en cola: {Count(SubmissionState.Accepted)} · pendientes: {Count(SubmissionState.Pending)} · incompletas: {Count(SubmissionState.Incomplete)} · desconocidas: {Count(SubmissionState.Unknown)} · fallidas: {Count(SubmissionState.Failed)}");
-            lines.AddRange(run.Results.Select(r => $"{r.Card.Matricula} · copia {r.Copy} · {r.Copies} tarjeta(s) · {r.State} · {r.Message}{(r.JobIds.Count > 0 ? " · trabajos: " + string.Join(", ", r.JobIds) : "")}"));
+            lines.AddRange(run.Results.Select(r => $"{r.Card.Matricula} · copia {r.Copy} · {r.Copies} tarjeta(s) · {StateText(r.State)} · {r.Message}{(r.JobIds.Count > 0 ? " · trabajos: " + string.Join(", ", r.JobIds) : "")}"));
         }
         lines.Add("La cola no acredita tarjetas físicas completadas. Detener no cancela lo ya aceptado. No hay reintento automático.");
         RunSummary.Text = string.Join("\n", lines);

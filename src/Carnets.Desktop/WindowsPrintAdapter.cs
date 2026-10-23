@@ -77,6 +77,7 @@ public sealed class WindowsPrintAdapter(OperatorSettings settings, CardComposer 
         string? jobId = null;
         try { queue.Refresh(); using var jobs = queue.GetPrintJobInfoCollection(); jobId = jobs.FirstOrDefault(j => j.Name == jobName)?.JobIdentifier.ToString(); }
         catch (PrintSystemException) { /* A completed job may already have disappeared. */ }
+        prepared.Remove(submission.Card.Matricula);
         return new(jobId, "Enviado a la cola; salida física sin verificar.");
     }
 }

@@ -24,11 +24,13 @@ public sealed class HolderRow(Holder holder) : INotifyPropertyChanged
     public string? PhotoPath { get; set; }
     public string? PhotoError { get; set; }
     public PreparedPhoto? Photo { get; set; }
+    public string ReviewedPhotoHash { get; set; } = "";
+    public bool PhotoValidated { get; set; }
     public Crop Crop { get; set; } = new();
     public List<string> LayoutErrors { get; set; } = [];
     public bool LowResolution { get; set; }
     public bool Valid => Holder.IsValid && PhotoError is null && PhotoPath is not null && LayoutErrors.Count == 0;
-    public string Status => !Valid ? "Error" : Photo is null ? "Revisar foto" : Holder.Issues.Any(i => i.Warning) || LowResolution ? "Advertencia" : "Listo";
+    public string Status => !Valid ? "Error" : !PhotoValidated ? "Revisar foto" : Holder.Issues.Any(i => i.Warning) || LowResolution ? "Advertencia" : "Listo";
     public string Details => string.Join("\n", Holder.Issues.Select(i => $"{(i.Warning ? "Advertencia" : "Error")} · {i.Field}: {i.Message}").Concat(PhotoError is null ? [] : new[] { "Foto: " + PhotoError }).Concat(LayoutErrors).Concat(LowResolution ? new[] { "Advertencia: resolución efectiva menor a 150 ppp." } : []).Prepend($"Hoja {Holder.Sheet} · fila {Row}"));
     public void Refresh() { Notify(nameof(Status)); Notify(nameof(Details)); Notify(nameof(Valid)); }
     public event PropertyChangedEventHandler? PropertyChanged;
